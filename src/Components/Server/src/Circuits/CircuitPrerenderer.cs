@@ -5,6 +5,7 @@ using System;
 using System.Collections.Generic;
 using System.Runtime.ExceptionServices;
 using System.Threading.Tasks;
+using Microsoft.AspNetCore.Components.Server.Prerendering;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Http.Extensions;
 
@@ -19,7 +20,7 @@ namespace Microsoft.AspNetCore.Components.Server.Circuits
             _circuitFactory = circuitFactory;
         }
 
-        public async Task<IEnumerable<string>> PrerenderComponentAsync(ComponentPrerenderingContext prerenderingContext)
+        public async Task<ComponentPrerenderResult> PrerenderComponentAsync(ComponentPrerenderingContext prerenderingContext)
         {
             var context = prerenderingContext.Context;
             var circuitHost = _circuitFactory.CreateCircuitHost(
@@ -36,22 +37,38 @@ namespace Microsoft.AspNetCore.Components.Server.Circuits
             // handler.
             try
             {
-                return await circuitHost.PrerenderComponentAsync(
+                circuitHost.Renderer.UnhandledException += PrerenderException;
+                circuitHost.Renderer.UnhandledSynchronizationException += PrerenderUnhandledException;
+                var renderResult = await circuitHost.PrerenderComponentAsync(
                     prerenderingContext.ComponentType,
                     prerenderingContext.Parameters);
+                return new ComponentPrerenderResult(renderResult);
             }
             finally
             {
                 await circuitHost.DisposeAsync();
             }
+
+            void PrerenderException(object sender, Exception e)
+            {
+                ExceptionDispatchInfo.Capture(e).Throw();
+            }
+
+            void PrerenderUnhandledException(object sender, UnhandledExceptionEventArgs e)
+            {
+                ExceptionDispatchInfo.Capture((Exception)e.ExceptionObject).Throw();
+            }
         }
 
+<<<<<<< HEAD
         private void CircuitHost_UnhandledException(object sender, UnhandledExceptionEventArgs e)
         {
             // Throw all exceptions encountered during pre-rendering so the default developer
             // error page can respond.
             ExceptionDispatchInfo.Capture((Exception)e.ExceptionObject).Throw();
         }
+=======
+>>>>>>> Relayer things
 
         private string GetFullUri(HttpRequest request)
         {
