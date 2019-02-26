@@ -13,6 +13,8 @@ namespace Microsoft.AspNetCore.Components.Server.Circuits
 {
     internal class CircuitPrerenderer : IComponentPrerenderer
     {
+        private static object CircuitHostKey = new object();
+
         private readonly CircuitFactory _circuitFactory;
 
         public CircuitPrerenderer(CircuitFactory circuitFactory)
@@ -23,52 +25,52 @@ namespace Microsoft.AspNetCore.Components.Server.Circuits
         public async Task<ComponentPrerenderResult> PrerenderComponentAsync(ComponentPrerenderingContext prerenderingContext)
         {
             var context = prerenderingContext.Context;
-            var circuitHost = _circuitFactory.CreateCircuitHost(
-                context,
-                client: CircuitClientProxy.OfflineClient,
-                GetFullUri(context.Request),
-                GetFullBaseUri(context.Request));
+            var circuitHost = GetOrCreateCircuitHost(context);
 
-            // We don't need to unsubscribe because the circuit host object is scoped to this call.
-            circuitHost.UnhandledException += CircuitHost_UnhandledException;
-
-            // For right now we just do prerendering and dispose the circuit. In the future we will keep the circuit around and
-            // reconnect to it from the ComponentsHub. If we keep the circuit/renderer we also need to unsubscribe this error
-            // handler.
             try
             {
                 circuitHost.Renderer.UnhandledException += PrerenderException;
                 circuitHost.Renderer.UnhandledSynchronizationException += PrerenderUnhandledException;
+
+
+            // For right now we just do prerendering and dispose the circuit. In the future we will keep the circuit around and
+            // reconnect to it from the ComponentsHub.
                 var renderResult = await circuitHost.PrerenderComponentAsync(
                     prerenderingContext.ComponentType,
                     prerenderingContext.Parameters);
+
                 return new ComponentPrerenderResult(renderResult);
-            }
-            finally
-            {
-                await circuitHost.DisposeAsync();
-            }
+        }
 
-            void PrerenderException(object sender, Exception e)
+        private CircuitHost GetOrCreateCircuitHost(HttpContext context)
+        {
+            if(context.Items.TryGetValue(CircuitHostKey, out var existingHost))
             {
-                ExceptionDispatchInfo.Capture(e).Throw();
+                return (CircuitHost)existingHost;
             }
-
-            void PrerenderUnhandledException(object sender, UnhandledExceptionEventArgs e)
+            else
             {
-                ExceptionDispatchInfo.Capture((Exception)e.ExceptionObject).Throw();
+                var result = _circuitFactory.CreateCircuitHost(
+                    context,
+                    client: CircuitClientProxy.OfflineClient,
+                    GetFullUri(context.Request),
+                    GetFullBaseUri(context.Request));
+
+                circuitHost.UnhandledException += CircuitHost_UnhandledException;
+
+                context.Items.Add(CircuitHostKey, result);
+                context.Response.RegisterForDisposeAsync(result);
+
+                return result;
             }
         }
 
-<<<<<<< HEAD
         private void CircuitHost_UnhandledException(object sender, UnhandledExceptionEventArgs e)
         {
             // Throw all exceptions encountered during pre-rendering so the default developer
             // error page can respond.
             ExceptionDispatchInfo.Capture((Exception)e.ExceptionObject).Throw();
         }
-=======
->>>>>>> Relayer things
 
         private string GetFullUri(HttpRequest request)
         {
