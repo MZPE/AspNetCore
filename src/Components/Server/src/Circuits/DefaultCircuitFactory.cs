@@ -48,10 +48,10 @@ namespace Microsoft.AspNetCore.Components.Server.Circuits
             var uriHelper = (RemoteUriHelper)scope.ServiceProvider.GetRequiredService<IUriHelper>();
             if (client != CircuitClientProxy.OfflineClient)
             {
+                uriHelper.AttachJsRuntime(jsRuntime);
                 uriHelper.InitializeState(
                     uriAbsolute,
                     baseUriAbsolute);
-                uriHelper.AttachJsRuntime(jsRuntime);
             }
             else
             {
