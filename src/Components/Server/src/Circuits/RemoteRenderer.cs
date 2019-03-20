@@ -22,8 +22,6 @@ namespace Microsoft.AspNetCore.Components.Browser.Rendering
         // The purpose of the timeout is just to ensure server resources are released at some
         // point if the client disconnects without sending back an ACK after a render
         private const int TimeoutMilliseconds = 60 * 1000;
-
-        private readonly int _id;
         private readonly IJSRuntime _jsRuntime;
         private readonly CircuitClientProxy _client;
         private readonly RendererRegistry _rendererRegistry;
@@ -54,11 +52,13 @@ namespace Microsoft.AspNetCore.Components.Browser.Rendering
             _jsRuntime = jsRuntime;
             _client = client;
 
-            _id = _rendererRegistry.Add(this);
+            Id = _rendererRegistry.Add(this);
             _logger = logger;
         }
 
         internal ConcurrentQueue<byte[]> OfflineRenderBatches = new ConcurrentQueue<byte[]>();
+
+        public int Id { get; }
 
         /// <summary>
         /// Associates the <see cref="IComponent"/> with the <see cref="RemoteRenderer"/>,
@@ -73,7 +73,7 @@ namespace Microsoft.AspNetCore.Components.Browser.Rendering
 
             var attachComponentTask = _jsRuntime.InvokeAsync<object>(
                 "Blazor._internal.attachRootComponentToElement",
-                _id,
+                Id,
                 domElementSelector,
                 componentId);
             CaptureAsyncExceptions(attachComponentTask);
@@ -84,12 +84,6 @@ namespace Microsoft.AspNetCore.Components.Browser.Rendering
         /// <inheritdoc />
         protected override void HandleException(Exception exception)
         {
-            if (_prerenderMode)
-            {
-                // If we are prerrendering just rethrow the exception as we want the caller to be notified.
-                ExceptionDispatchInfo.Capture(exception).Throw();
-            }
-
             if (exception is AggregateException aggregateException)
             {
                 foreach (var innerException in aggregateException.Flatten().InnerExceptions)
@@ -109,7 +103,7 @@ namespace Microsoft.AspNetCore.Components.Browser.Rendering
         protected override void Dispose(bool disposing)
         {
             base.Dispose(true);
-            _rendererRegistry.TryRemove(_id);
+            _rendererRegistry.TryRemove(Id);
         }
 
         /// <inheritdoc />
@@ -156,7 +150,7 @@ namespace Microsoft.AspNetCore.Components.Browser.Rendering
             // the whole render with that exception
             try
             {
-                _client.SendAsync("JS.RenderBatch", _id, renderId, batchBytes).ContinueWith(sendTask =>
+                _client.SendAsync("JS.RenderBatch", Id, renderId, batchBytes).ContinueWith(sendTask =>
                 {
                     if (sendTask.IsFaulted)
                     {

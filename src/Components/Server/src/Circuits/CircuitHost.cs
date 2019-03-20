@@ -95,11 +95,14 @@ namespace Microsoft.AspNetCore.Components.Server.Circuits
 
         public IDispatcher Dispatcher { get; }
 
-        public Task<IEnumerable<string>> PrerenderComponentAsync(Type componentType, ParameterCollection parameters)
+        public Task<RenderedHtmlResult> PrerenderComponentAsync(Type componentType, ParameterCollection parameters)
         {
             return Dispatcher.InvokeAsync(async () =>
             {
                 var result = await Renderer.RenderComponentAsync(componentType, parameters);
+
+                await OnCircuitOpenedAsync(CancellationToken.None);
+
                 return result;
             });
         }
@@ -112,6 +115,12 @@ namespace Microsoft.AspNetCore.Components.Server.Circuits
                 {
                     SetCurrentCircuitHost(this);
                     _initialized = true; // We're ready to accept incoming JSInterop calls from here on
+                    var (componentType, domElementSelector, prerendered) = Descriptors[i];
+                    if (!prerendered)
+                    {
+                        await Renderer.AddComponentAsync(componentType, domElementSelector);
+                    }
+                }
 
                     await OnCircuitOpenedAsync(cancellationToken);
                     await OnConnectionUpAsync(cancellationToken);

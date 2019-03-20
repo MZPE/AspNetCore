@@ -34,9 +34,10 @@ namespace Microsoft.AspNetCore.Mvc.ViewFeatures.RazorComponents
             InitializeUriHelper(httpContext);
             using (var htmlRenderer = new HtmlRenderer(httpContext.RequestServices, _encoder.Encode, dispatcher))
             {
-                return await dispatcher.InvokeAsync(() => htmlRenderer.RenderComponentAsync(
+                var result = await dispatcher.InvokeAsync(() => htmlRenderer.RenderComponentAsync(
                     componentType,
                     parameters));
+                return result.Tokens;
             }
         }
 

@@ -94,8 +94,8 @@ namespace Microsoft.AspNetCore.Components.Server.Circuits
         {
             if (client == CircuitClientProxy.OfflineClient)
             {
-                // This is the prerendering case.
-                return Array.Empty<ComponentDescriptor>();
+                // This is the prerendering case. Descriptors will be registered by the prerenderer.
+                return new List<ComponentDescriptor>();
             }
             else
             {
@@ -109,10 +109,6 @@ namespace Microsoft.AspNetCore.Components.Server.Circuits
                 }
 
                 var componentsMetadata = endpoint.Metadata.OfType<ComponentDescriptor>().ToList();
-                if (componentsMetadata.Count == 0)
-                {
-                    throw new InvalidOperationException("No component was registered with the component hub.");
-                }
 
                 return componentsMetadata;
             }

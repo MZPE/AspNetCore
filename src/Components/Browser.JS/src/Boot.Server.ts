@@ -8,9 +8,10 @@ import { renderBatch } from './Rendering/Renderer';
 import { fetchBootConfigAsync, loadEmbeddedResourcesAsync } from './BootCommon';
 import { CircuitHandler } from './Platform/Circuits/CircuitHandler';
 import { AutoReconnectCircuitHandler } from './Platform/Circuits/AutoReconnectCircuitHandler';
+import { attachRootComponentToElement } from './Rendering/Renderer';
 
 async function boot() {
-  const circuitHandlers: CircuitHandler[] = [ new AutoReconnectCircuitHandler() ];
+  const circuitHandlers: CircuitHandler[] = [new AutoReconnectCircuitHandler()];
   window['Blazor'].circuitHandlers = circuitHandlers;
 
   // In the background, start loading the boot config and any embedded resources
@@ -20,6 +21,19 @@ async function boot() {
 
   const initialConnection = await initializeConnection(circuitHandlers);
 
+  var circuitIds: string[] = [];
+  var prerenderedCircuits = document.querySelectorAll("[data-component-id][data-circuit-id][data-renderer-id]");
+  for (let i = 0; i < prerenderedCircuits.length; i++) {
+    const element = prerenderedCircuits[i] as HTMLElement;
+    const { componentId, circuitId, rendererId } = element.dataset;
+    if (circuitIds.indexOf(circuitId!) === -1) {
+      circuitIds.push(circuitId!);
+    }
+    const selector = `[data-component-id="${componentId}"][data-circuit-id="${circuitId}"][data-renderer-id="${rendererId}"]`;
+    attachRootComponentToElement(Number.parseInt(rendererId!), selector, Number.parseInt(componentId!));
+  }
+
+
   // Ensure any embedded resources have been loaded before starting the app
   await embeddedResourcesPromise;
   const circuitId = await initialConnection.invoke<string>(
@@ -28,9 +42,11 @@ async function boot() {
     uriHelperFunctions.getBaseURI()
   );
 
-  window['Blazor'].reconnect = async () => {
+  const reconnect = async () => {
     const reconnection = await initializeConnection(circuitHandlers);
-    if (!(await reconnection.invoke<Boolean>('ConnectCircuit', circuitId))) {
+    var results = await Promise.all(circuitIds.map(id => reconnection.invoke<boolean>('ConnectCircuit', id)))
+
+    if (!results.reduce((current, next) => current && next, true)) {
       return false;
     }
 
@@ -38,7 +54,13 @@ async function boot() {
     return true;
   };
 
-  circuitHandlers.forEach(h => h.onConnectionUp && h.onConnectionUp());
+  window['Blazor'].reconnect = reconnect;
+
+  const reconnectTask = reconnect();
+
+  circuitIds.push(circuitId);
+
+  await reconnectTask;
 }
 
 async function initializeConnection(circuitHandlers: CircuitHandler[]): Promise<signalR.HubConnection> {

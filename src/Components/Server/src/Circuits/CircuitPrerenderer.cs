@@ -3,6 +3,7 @@
 
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Runtime.ExceptionServices;
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.Components.Server.Prerendering;
@@ -16,10 +17,12 @@ namespace Microsoft.AspNetCore.Components.Server.Circuits
         private static object CircuitHostKey = new object();
 
         private readonly CircuitFactory _circuitFactory;
+        private readonly CircuitRegistry _registry;
 
-        public CircuitPrerenderer(CircuitFactory circuitFactory)
+        public CircuitPrerenderer(CircuitFactory circuitFactory, CircuitRegistry registry)
         {
             _circuitFactory = circuitFactory;
+            _registry = registry;
         }
 
         public async Task<ComponentPrerenderResult> PrerenderComponentAsync(ComponentPrerenderingContext prerenderingContext)
@@ -39,7 +42,17 @@ namespace Microsoft.AspNetCore.Components.Server.Circuits
                     prerenderingContext.ComponentType,
                     prerenderingContext.Parameters);
 
-                return new ComponentPrerenderResult(renderResult);
+            circuitHost.Descriptors.Add(new ComponentDescriptor
+            {
+                ComponentType = prerenderingContext.ComponentType,
+                Selector = $"[data-component-id={renderResult.ComponentId}]",
+                Prerendered = true
+            });
+
+            var result = new[] { $"<div data-circuit-id=\"{circuitHost.CircuitId}\" data-renderer-id=\"{circuitHost.Renderer.Id}\" data-component-id=\"{renderResult.ComponentId}\">" }
+                .Concat(renderResult.Tokens).Concat(new[] { "</div>" });
+
+                return new ComponentPrerenderResult(result);
         }
 
         private CircuitHost GetOrCreateCircuitHost(HttpContext context)
@@ -58,8 +71,8 @@ namespace Microsoft.AspNetCore.Components.Server.Circuits
 
                 circuitHost.UnhandledException += CircuitHost_UnhandledException;
 
+                _registry.RegisterDisconectedCircuit(result);
                 context.Items.Add(CircuitHostKey, result);
-                context.Response.RegisterForDisposeAsync(result);
 
                 return result;
             }
