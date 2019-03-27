@@ -11,10 +11,12 @@ namespace Microsoft.AspNetCore.Components.Server.Prerendering
     /// </summary>
     public sealed class ComponentPrerenderResult
     {
+        private readonly string _circuitId;
         private readonly IEnumerable<string> _result;
 
-        internal ComponentPrerenderResult(IEnumerable<string> result)
+        internal ComponentPrerenderResult(string circuitId, IEnumerable<string> result)
         {
+            _circuitId = circuitId;
             _result = result;
         }
 
@@ -24,10 +26,22 @@ namespace Microsoft.AspNetCore.Components.Server.Prerendering
         /// <param name="writer">The <see cref="TextWriter"/> the results will be written to.</param>
         public void WriteTo(TextWriter writer)
         {
+            WritePrelude(writer);
             foreach (var element in _result)
             {
                 writer.Write(element);
             }
+            WriteEpiloge(writer);
+        }
+
+        private void WriteEpiloge(TextWriter writer)
+        {
+            writer.WriteLine($"<!-- START CircuitId: {_circuitId} -->");
+        }
+
+        private void WritePrelude(TextWriter writer)
+        {
+            writer.WriteLine($"<!-- END CircuitId: {_circuitId} -->");
         }
     }
 }
