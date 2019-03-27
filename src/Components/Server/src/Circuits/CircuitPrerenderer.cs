@@ -2,7 +2,6 @@
 // Licensed under the Apache License, Version 2.0. See License.txt in the project root for license information.
 
 using System;
-using System.Collections.Generic;
 using System.Linq;
 using System.Runtime.ExceptionServices;
 using System.Threading.Tasks;
@@ -30,17 +29,9 @@ namespace Microsoft.AspNetCore.Components.Server.Circuits
             var context = prerenderingContext.Context;
             var circuitHost = GetOrCreateCircuitHost(context);
 
-            try
-            {
-                circuitHost.Renderer.UnhandledException += PrerenderException;
-                circuitHost.Renderer.UnhandledSynchronizationException += PrerenderUnhandledException;
-
-
-            // For right now we just do prerendering and dispose the circuit. In the future we will keep the circuit around and
-            // reconnect to it from the ComponentsHub.
-                var renderResult = await circuitHost.PrerenderComponentAsync(
-                    prerenderingContext.ComponentType,
-                    prerenderingContext.Parameters);
+            var renderResult = await circuitHost.PrerenderComponentAsync(
+                prerenderingContext.ComponentType,
+                prerenderingContext.Parameters);
 
             circuitHost.Descriptors.Add(new ComponentDescriptor
             {
@@ -52,12 +43,12 @@ namespace Microsoft.AspNetCore.Components.Server.Circuits
             var result = new[] { $"<div data-circuit-id=\"{circuitHost.CircuitId}\" data-renderer-id=\"{circuitHost.Renderer.Id}\" data-component-id=\"{renderResult.ComponentId}\">" }
                 .Concat(renderResult.Tokens).Concat(new[] { "</div>" });
 
-                return new ComponentPrerenderResult(result);
+            return new ComponentPrerenderResult(result);
         }
 
         private CircuitHost GetOrCreateCircuitHost(HttpContext context)
         {
-            if(context.Items.TryGetValue(CircuitHostKey, out var existingHost))
+            if (context.Items.TryGetValue(CircuitHostKey, out var existingHost))
             {
                 return (CircuitHost)existingHost;
             }
@@ -69,8 +60,12 @@ namespace Microsoft.AspNetCore.Components.Server.Circuits
                     GetFullUri(context.Request),
                     GetFullBaseUri(context.Request));
 
-                circuitHost.UnhandledException += CircuitHost_UnhandledException;
-
+                result.UnhandledException += CircuitHost_UnhandledException;
+                context.Response.OnCompleted(() =>
+                {
+                    result.UnhandledException -= CircuitHost_UnhandledException;
+                    return Task.CompletedTask;
+                });
                 _registry.RegisterDisconectedCircuit(result);
                 context.Items.Add(CircuitHostKey, result);
 
