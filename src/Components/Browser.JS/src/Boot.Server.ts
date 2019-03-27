@@ -73,8 +73,13 @@ async function initializeConnection(circuitHandlers: CircuitHandler[]): Promise<
   connection.on('JS.BeginInvokeJS', DotNet.jsCallDispatcher.beginInvokeJSFromDotNet);
   connection.on('JS.RenderBatch', (browserRendererId: number, renderId: number, batchData: Uint8Array) => {
     try {
-      renderBatch(browserRendererId, new OutOfProcessRenderBatch(batchData));
-      connection.send('OnRenderCompleted', renderId, null);
+      RenderTracker.trackRender(browserRendererId, renderId, batchData);
+      for (let [nextId, nextData] = RenderTracker.getNextBatchToRender(browserRendererId);
+        !!nextId && nextData !== undefined;
+        [nextId, nextData] = RenderTracker.getNextBatchToRender(browserRendererId)) {
+        renderBatch(browserRendererId, new OutOfProcessRenderBatch(nextData));
+        completeBatch(browserRendererId, nextId);
+      }
     } catch (ex) {
       // If there's a rendering exception, notify server *and* throw on client
       connection.send('OnRenderCompleted', renderId, ex.toString());
@@ -100,6 +105,17 @@ async function initializeConnection(circuitHandlers: CircuitHandler[]): Promise<
   });
 
   return connection;
+
+  async function completeBatch(browserRendererId: number, renderId: number) {
+    for (let i = 0; i < 3; i++) {
+      try {
+        await connection.send('OnRenderCompleted', renderId, null);
+      }
+      catch {
+        console.log(`Failed to deliver completion notification for render '${renderId}' on attempt '${i}'.`);
+      }
+    }
+  }
 }
 
 function unhandledError(connection: signalR.HubConnection, err: Error) {
@@ -111,6 +127,47 @@ function unhandledError(connection: signalR.HubConnection, err: Error) {
   if (connection) {
     connection.stop();
   }
+}
+
+class RenderTracker {
+  private static _trackedRenders = new Map<number, RendererRecord>();
+
+  static getNextBatchToRender(browserRendererId: number): [number | undefined, Uint8Array | undefined] {
+    const renderRecord = this._trackedRenders.get(browserRendererId)!;
+    const { pendingRenders, nextRenderId } = renderRecord;
+    const nextRenderBatch = pendingRenders.get(nextRenderId);
+    if (nextRenderBatch !== undefined) {
+      pendingRenders.delete(nextRenderId);
+      renderRecord.nextRenderId++;
+      return [nextRenderId, nextRenderBatch];
+    } else {
+      return [undefined, undefined];
+    }
+  }
+
+  public static trackRender(browserRendererId: number, renderId: number, data: Uint8Array) {
+    const browserRendererMap = this._trackedRenders.get(browserRendererId) ||
+      { nextRenderId: 0, pendingRenders: new Map<number, Uint8Array>() };
+
+    this._trackedRenders.set(browserRendererId, browserRendererMap);
+    if (renderId < browserRendererMap.nextRenderId) {
+      // The server probably didn't get our ack in time and resent the batch.
+      // TODO: Ack again that this render was completed. The server will also contain
+      // logic to skip duplicate acks.
+      return;
+    }
+    // This might be the next batch to render or another batch further in the future if we lost
+    // a render on the way here.
+    // We are assuming here that renders with the same renderId will always be equal.
+    // We could check whether the render with the current id is already queued and check for
+    // it to be identical, but I don't think it's worth it.
+    browserRendererMap.pendingRenders.set(renderId, data);
+  }
+}
+
+interface RendererRecord {
+  nextRenderId: number;
+  pendingRenders: Map<number, Uint8Array>;
 }
 
 boot();

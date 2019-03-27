@@ -3,6 +3,7 @@
     "noImplicitAny": false,
     "noEmitOnError": true,
     "removeComments": false,
+    "downlevelIteration": true,
     "sourceMap": true,
     "target": "es5",
     "lib": ["es2015", "dom"],
