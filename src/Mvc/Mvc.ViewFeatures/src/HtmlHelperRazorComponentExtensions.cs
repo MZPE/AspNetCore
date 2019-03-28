@@ -21,14 +21,14 @@ namespace Microsoft.AspNetCore.Mvc.ViewFeatures
         /// </summary>
         /// <param name="htmlHelper">The <see cref="IHtmlHelper"/>.</param>
         /// <returns>The HTML produced by the rendered <typeparamref name="TComponent"/>.</returns>
-        public static Task<IHtmlContent> RenderComponentAsync<TComponent>(this IHtmlHelper htmlHelper) where TComponent : IComponent
+        public static Task<IHtmlContent> RenderStaticComponentAsync<TComponent>(this IHtmlHelper htmlHelper) where TComponent : IComponent
         {
             if (htmlHelper == null)
             {
                 throw new ArgumentNullException(nameof(htmlHelper));
             }
 
-            return htmlHelper.RenderComponentAsync<TComponent>(null);
+            return htmlHelper.RenderStaticComponentAsync<TComponent>(null);
         }
 
         /// <summary>
@@ -38,7 +38,7 @@ namespace Microsoft.AspNetCore.Mvc.ViewFeatures
         /// <param name="parameters">An <see cref="object"/> containing the parameters to pass
         /// to the component.</param>
         /// <returns>The HTML produced by the rendered <typeparamref name="TComponent"/>.</returns>
-        public static async Task<IHtmlContent> RenderComponentAsync<TComponent>(
+        public static async Task<IHtmlContent> RenderStaticComponentAsync<TComponent>(
             this IHtmlHelper htmlHelper,
             object parameters) where TComponent : IComponent
         {

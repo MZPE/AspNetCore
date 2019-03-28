@@ -16,7 +16,7 @@
 </head>
 <body>
     @*@(await Html.RenderComponentAsync<MvcSandbox.Components.App>())*@
-    @(await Html.PrerenderComponentAsync<MvcSandbox.Components.Robust>(new { Name = "Javier" }))
+    @(await Html.RenderComponentAsync<MvcSandbox.Components.Robust>(new { Name = "Javier" }))
 
     <script src="_framework/components.server.js"></script>
 </body>

@@ -28,7 +28,7 @@ namespace Microsoft.AspNetCore.Mvc.ViewFeatures.Test
             var writer = new StringWriter();
 
             // Act
-            var result = await helper.RenderComponentAsync<TestComponent>();
+            var result = await helper.RenderStaticComponentAsync<TestComponent>();
             result.WriteTo(writer, HtmlEncoder.Default);
             var content = writer.ToString();
 
@@ -182,7 +182,7 @@ namespace Microsoft.AspNetCore.Mvc.ViewFeatures.Test
 </table>";
 
             // Act
-            var result = await helper.RenderComponentAsync<AsyncComponent>();
+            var result = await helper.RenderStaticComponentAsync<AsyncComponent>();
             result.WriteTo(writer, HtmlEncoder.Default);
             var content = writer.ToString();
 

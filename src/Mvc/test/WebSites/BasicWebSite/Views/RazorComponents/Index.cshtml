@@ -4,32 +4,32 @@
 <div id="Greetings">
     @if (Model)
     {
-        @(await Html.RenderComponentAsync<Greetings>())
+        @(await Html.RenderStaticComponentAsync<Greetings>())
     }
     else
     {
-        @(await Html.PrerenderComponentAsync<Greetings>())
+        @(await Html.RenderComponentAsync<Greetings>())
     }
 </div>
 
 <div id="FetchData">
     @if (Model)
     {
-        @(await Html.RenderComponentAsync<FetchData>(new { StartDate = new DateTime(2019, 01, 15) }))
+        @(await Html.RenderStaticComponentAsync<FetchData>(new { StartDate = new DateTime(2019, 01, 15) }))
     }
     else
     {
-        @(await Html.PrerenderComponentAsync<FetchData>(new { StartDate = new DateTime(2019, 01, 15) }))
+        @(await Html.RenderComponentAsync<FetchData>(new { StartDate = new DateTime(2019, 01, 15) }))
     }
 </div>
 
 <div id="Routing">
     @if (Model)
     {
-        @(await Html.RenderComponentAsync<RouterContainer>());
+        @(await Html.RenderStaticComponentAsync<RouterContainer>());
     }
     else
     {
-        @(await Html.PrerenderComponentAsync<RouterContainer>());
+        @(await Html.RenderComponentAsync<RouterContainer>());
     }
 </div>

@@ -26,7 +26,7 @@ namespace Microsoft.AspNetCore.Mvc.ViewFeatures
                     $"This typically means a call to 'services.AddRazorComponents()' is missing in 'Startup.ConfigureServices'.";
 
             // Act & Assert
-            var exception = await Assert.ThrowsAsync<InvalidOperationException>(() => helper.PrerenderComponentAsync<TestComponent>());
+            var exception = await Assert.ThrowsAsync<InvalidOperationException>(() => helper.RenderComponentAsync<TestComponent>());
 
             // Assert
             Assert.Equal(expectedmessage, exception.Message);
@@ -40,7 +40,7 @@ namespace Microsoft.AspNetCore.Mvc.ViewFeatures
             var writer = new StringWriter();
 
             // Act
-            var result = await helper.PrerenderComponentAsync<TestComponent>();
+            var result = await helper.RenderComponentAsync<TestComponent>();
             result.WriteTo(writer, HtmlEncoder.Default);
             var content = writer.ToString();
 
@@ -56,7 +56,7 @@ namespace Microsoft.AspNetCore.Mvc.ViewFeatures
             var writer = new StringWriter();
 
             // Act
-            var result = await helper.PrerenderComponentAsync<GreetingComponent>(new
+            var result = await helper.RenderComponentAsync<GreetingComponent>(new
             {
                 Name = "Steve"
             });
@@ -74,7 +74,7 @@ namespace Microsoft.AspNetCore.Mvc.ViewFeatures
             var helper = CreateHelper();
 
             // Act & Assert
-            var exception = await Assert.ThrowsAsync<InvalidOperationException>(() => helper.PrerenderComponentAsync<ExceptionComponent>(new
+            var exception = await Assert.ThrowsAsync<InvalidOperationException>(() => helper.RenderComponentAsync<ExceptionComponent>(new
             {
                 IsAsync = false
             }));
@@ -90,7 +90,7 @@ namespace Microsoft.AspNetCore.Mvc.ViewFeatures
             var helper = CreateHelper();
 
             // Act & Assert
-            var exception = await Assert.ThrowsAsync<InvalidOperationException>(() => helper.PrerenderComponentAsync<ExceptionComponent>(new
+            var exception = await Assert.ThrowsAsync<InvalidOperationException>(() => helper.RenderComponentAsync<ExceptionComponent>(new
             {
                 IsAsync = true
             }));
@@ -106,7 +106,7 @@ namespace Microsoft.AspNetCore.Mvc.ViewFeatures
             var helper = CreateHelper();
 
             // Act & Assert
-            var exception = await Assert.ThrowsAsync<InvalidOperationException>(() => helper.PrerenderComponentAsync<ExceptionComponent>(new
+            var exception = await Assert.ThrowsAsync<InvalidOperationException>(() => helper.RenderComponentAsync<ExceptionComponent>(new
             {
                 JsInterop = true
             }));
@@ -134,7 +134,7 @@ namespace Microsoft.AspNetCore.Mvc.ViewFeatures
             var writer = new StringWriter();
 
             // Act
-            var exception = await Assert.ThrowsAsync<InvalidOperationException>(() => helper.PrerenderComponentAsync<RedirectComponent>(new
+            var exception = await Assert.ThrowsAsync<InvalidOperationException>(() => helper.RenderComponentAsync<RedirectComponent>(new
             {
                 RedirectUri = "http://localhost/redirect"
             }));
@@ -196,7 +196,7 @@ namespace Microsoft.AspNetCore.Mvc.ViewFeatures
 </table>";
 
             // Act
-            var result = await helper.PrerenderComponentAsync<AsyncComponent>();
+            var result = await helper.RenderComponentAsync<AsyncComponent>();
             result.WriteTo(writer, HtmlEncoder.Default);
             var content = writer.ToString();
 
