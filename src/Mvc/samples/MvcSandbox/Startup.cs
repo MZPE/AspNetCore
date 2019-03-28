@@ -28,10 +28,7 @@ namespace MvcSandbox
             {
                 options.ConstraintMap["slugify"] = typeof(SlugifyParameterTransformer);
             });
-<<<<<<< HEAD
-=======
 
->>>>>>> Prerendering with reconnect
             services.AddRazorComponents();
             services.AddMvc()
                 .AddRazorRuntimeCompilation()
@@ -77,14 +74,12 @@ namespace MvcSandbox
 
                 builder.MapControllers();
                 builder.MapRazorPages();
-<<<<<<< HEAD
-                builder.MapComponentHub<MvcSandbox.Components.App>("app");
-                builder.MapFallbackToPage("/Components");
-=======
-                builder.MapHub<ComponentHub>("/Components/_blazor");
 
-                builder.MapFallbackToController("Index", "Home");
->>>>>>> Prerendering with reconnect
+                //builder.MapComponentHub<MvcSandbox.Components.App>("app");
+                builder.MapHub<ComponentHub>(ComponentHub.DefaultPath);
+                builder.MapFallbackToPage("/Components");
+
+                //builder.MapFallbackToController("Index", "Home");
             });
         }
 

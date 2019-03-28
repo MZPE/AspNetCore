@@ -73,6 +73,7 @@ async function initializeConnection(circuitHandlers: CircuitHandler[]): Promise<
   connection.on('JS.BeginInvokeJS', DotNet.jsCallDispatcher.beginInvokeJSFromDotNet);
   connection.on('JS.RenderBatch', (browserRendererId: number, renderId: number, batchData: Uint8Array) => {
     try {
+      console.log(`Render batch ${renderId} for renderer ${browserRendererId}.`);
       RenderTracker.trackRender(browserRendererId, renderId, batchData);
       for (let [nextId, nextData] = RenderTracker.getNextBatchToRender(browserRendererId);
         !!nextId && nextData !== undefined;
@@ -139,6 +140,7 @@ class RenderTracker {
     if (nextRenderBatch !== undefined) {
       pendingRenders.delete(nextRenderId);
       renderRecord.nextRenderId++;
+      console.log(`Rendering batch '${nextRenderId}'`);
       return [nextRenderId, nextRenderBatch];
     } else {
       return [undefined, undefined];
@@ -147,7 +149,7 @@ class RenderTracker {
 
   public static trackRender(browserRendererId: number, renderId: number, data: Uint8Array) {
     const browserRendererMap = this._trackedRenders.get(browserRendererId) ||
-      { nextRenderId: 0, pendingRenders: new Map<number, Uint8Array>() };
+      { nextRenderId: 2, pendingRenders: new Map<number, Uint8Array>() };
 
     this._trackedRenders.set(browserRendererId, browserRendererMap);
     if (renderId < browserRendererMap.nextRenderId) {

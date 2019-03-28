@@ -56,7 +56,7 @@ namespace Microsoft.AspNetCore.Components.Browser.Rendering
             _logger = logger;
         }
 
-        internal ConcurrentQueue<byte[]> OfflineRenderBatches = new ConcurrentQueue<byte[]>();
+        internal ConcurrentQueue<(long id, byte[] data)> PendingRenderBatches = new ConcurrentQueue<(long, byte[])>();
 
         public int Id { get; }
 
@@ -117,31 +117,34 @@ namespace Microsoft.AspNetCore.Components.Browser.Rendering
             //       buffer on every render.
             var batchBytes = MessagePackSerializer.Serialize(batch, RenderBatchFormatterResolver.Instance);
 
-            if (!_client.Connected)
-            {
-                // Buffer the rendered batches while the client is disconnected. We'll send it down once the client reconnects.
-                OfflineRenderBatches.Enqueue(batchBytes);
-                return Task.CompletedTask;
-            }
+            var renderId = Interlocked.Increment(ref _nextRenderId);
+
+            // Buffer the rendered batches while the client is disconnected. We'll send it down once the client reconnects.
+            PendingRenderBatches.Enqueue((renderId, batchBytes));
 
             Log.BeginUpdateDisplayAsync(_logger, _client.ConnectionId);
-            return WriteBatchBytes(batchBytes);
+            if (_client.Connected)
+            {
+                return WriteBatchBytes(renderId, batchBytes);
+            }
+            else
+            {
+                return Task.CompletedTask;
+            }
         }
 
         public async Task ProcessBufferedRenderBatches()
         {
             // The server may discover that the client disconnected while we're attempting to write empty rendered batches.
             // Discontinue writing in this event.
-            while (_client.Connected && OfflineRenderBatches.TryDequeue(out var renderBatch))
+            while (_client.Connected && PendingRenderBatches.TryPeek(out var renderBatch))
             {
-                await WriteBatchBytes(renderBatch);
+                await WriteBatchBytes(renderBatch.id, renderBatch.data);
             }
         }
 
-        private Task WriteBatchBytes(byte[] batchBytes)
+        private Task WriteBatchBytes(long renderId, byte[] batchBytes)
         {
-            var renderId = Interlocked.Increment(ref _nextRenderId);
-
             var pendingRenderInfo = new AutoCancelTaskCompletionSource<object>(TimeoutMilliseconds);
             _pendingRenders[renderId] = pendingRenderInfo;
 
@@ -150,13 +153,7 @@ namespace Microsoft.AspNetCore.Components.Browser.Rendering
             // the whole render with that exception
             try
             {
-                _client.SendAsync("JS.RenderBatch", Id, renderId, batchBytes).ContinueWith(sendTask =>
-                {
-                    if (sendTask.IsFaulted)
-                    {
-                        pendingRenderInfo.TrySetException(sendTask.Exception);
-                    }
-                });
+                var _ = SendWithRetry(renderId, batchBytes, pendingRenderInfo);
             }
             catch (Exception syncException)
             {
@@ -174,8 +171,57 @@ namespace Microsoft.AspNetCore.Components.Browser.Rendering
             });
         }
 
+        private async Task SendWithRetry(long renderId, byte[] batchBytes, AutoCancelTaskCompletionSource<object> pendingRenderInfo)
+        {
+            int attempts = 0;
+            do
+            {
+                attempts++;
+                try
+                {
+                    if (_client.Connected)
+                    {
+                        await _client.SendAsync("JS.RenderBatch", Id, renderId, batchBytes);
+                    }
+
+                    await Task.Delay(TimeSpan.FromSeconds(10));
+                }
+                catch (Exception e)
+                {
+                    if (attempts == 3)
+                    {
+                        pendingRenderInfo.TrySetException(e);
+                    }
+                }
+            } while (attempts < 3 || !PendingRenderBatches.TryPeek(out var next) && renderId == next.id);
+        }
+
+        private readonly object lck = new object();
+
         public void OnRenderCompleted(long renderId, string errorMessageOrNull)
         {
+            lock (lck)
+            {
+                while (PendingRenderBatches.TryPeek(out var entry))
+                {
+                    // Dequeue entries until we sync with the render batch number received.
+                    if (renderId < entry.id)
+                    {
+                        // We successfully received an ack for a pending batch left.
+                        break;
+                    }
+
+                    // renderId >= entry.id -> Likely we missed an ack from the client. We simply catch up as a bigger number means the client already rendered previous batches successfully.
+                    PendingRenderBatches.TryDequeue(out var _);
+                    if(renderId == entry.id)
+                    {
+                        // We cought up.
+                        break;
+                    }
+                }
+            }
+
+            // If it's an already processed batch then we are going to noop here.
             if (_pendingRenders.TryGetValue(renderId, out var pendingRenderInfo))
             {
                 if (errorMessageOrNull == null)

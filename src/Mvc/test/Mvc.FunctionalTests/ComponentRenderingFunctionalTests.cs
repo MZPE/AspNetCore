@@ -59,7 +59,7 @@ namespace Microsoft.AspNetCore.Mvc.FunctionalTests
         public async Task Renders_RoutingComponent()
         {
             // Arrange & Act
-            var client = CreateClient(Factory, builder => builder.ConfigureServices(services => services.AddRazorComponents()));
+            var client = CreateClient(Factory.WithWebHostBuilder(builder => builder.ConfigureServices(services => services.AddRazorComponents())));
 
             var response = await client.GetAsync("http://localhost/components/routable");
 
@@ -122,7 +122,7 @@ namespace Microsoft.AspNetCore.Mvc.FunctionalTests
         public async Task Renders_ThrowingComponent_UsingRazorComponents_Prerrenderer()
         {
             // Arrange & Act
-            var client = CreateClient(Factory, builder => builder.ConfigureServices(services => services.AddRazorComponents()));
+            var client = CreateClient(Factory.WithWebHostBuilder(builder => builder.ConfigureServices(services => services.AddRazorComponents())));
 
             var response = await client.GetAsync("http://localhost/components/throws");
 
@@ -216,7 +216,9 @@ namespace Microsoft.AspNetCore.Mvc.FunctionalTests
         {
             var loopHandler = new LoopHttpHandler();
 
-            var client = fixture.CreateClient();
+            var client = fixture
+                .WithWebHostBuilder(builder => builder.ConfigureServices(ConfigureTestWeatherForecastService))
+                .CreateClient();
 
             // We configure the inner handler with a handler to this TestServer instance so that calls to the
             // server can get routed properly.
