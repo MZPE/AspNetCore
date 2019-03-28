@@ -67,6 +67,11 @@ namespace Microsoft.AspNetCore.Components.Server
         public string StartCircuit(string uriAbsolute, string baseUriAbsolute)
         {
             var circuitClient = new CircuitClientProxy(Clients.Caller, Context.ConnectionId);
+            if (DefaultCircuitFactory.ResolveComponentMetadata(Context.GetHttpContext(), circuitClient).Count == 0)
+            {
+                // No components preregistered so return;
+                return null;
+            }
 
             var circuitHost = _circuitFactory.CreateCircuitHost(
                 Context.GetHttpContext(),
@@ -102,7 +107,7 @@ namespace Microsoft.AspNetCore.Components.Server
                 // Dispatch any buffered renders we accumulated during a disconnect.
                 // Note that while the rendering is async, we cannot await it here. The Task returned by ProcessBufferedRenderBatches relies on
                 // OnRenderCompleted to be invoked to complete, and SignalR does not allow concurrent hub method invocations.
-                _ = circuitHost.Renderer.ProcessBufferedRenderBatches();
+                var _ = CircuitHost.Renderer.InvokeAsync(() => circuitHost.Renderer.ProcessBufferedRenderBatches());
                 return true;
             }
 
@@ -122,6 +127,7 @@ namespace Microsoft.AspNetCore.Components.Server
         /// </summary>
         public void OnRenderCompleted(long renderId, string errorMessageOrNull)
         {
+            _logger.LogInformation($"Received confirmation for batch {renderId}");
             EnsureCircuitHost().Renderer.OnRenderCompleted(renderId, errorMessageOrNull);
         }
 
@@ -140,6 +146,15 @@ namespace Microsoft.AspNetCore.Components.Server
             catch (Exception ex)
             {
                 _logger.LogError(ex, "Failed to transmit exception to client");
+            }
+            finally
+            {
+                // Set the circuit disconnected.
+                // This will trigger the timeout that weill eventually dispose the circuit.
+                // If we were able to send the notificiation back to the client, it will have
+                // aborted the connection.
+                // We could do this right away if we wanted to, as there's nothing else to do.
+                await _circuitRegistry.DisconnectAsync(circuitHost, circuitHost.Client.ConnectionId);
             }
         }
 

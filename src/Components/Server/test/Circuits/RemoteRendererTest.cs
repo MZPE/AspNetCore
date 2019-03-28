@@ -43,7 +43,7 @@ namespace Microsoft.AspNetCore.Components.Browser.Rendering
             component.TriggerRender();
 
             // Assert
-            Assert.Equal(2, renderer.OfflineRenderBatches.Count);
+            Assert.Equal(2, renderer.PendingRenderBatches.Count);
         }
 
         [Fact]
@@ -51,13 +51,13 @@ namespace Microsoft.AspNetCore.Components.Browser.Rendering
         {
             // Arrange
             var serviceProvider = new ServiceCollection().BuildServiceProvider();
-            var renderIds = new List<int>();
+            var renderIds = new List<long>();
 
             var initialClient = new Mock<IClientProxy>();
             initialClient.Setup(c => c.SendCoreAsync(It.IsAny<string>(), It.IsAny<object[]>(), It.IsAny<CancellationToken>()))
                 .Callback((string name, object[] value, CancellationToken token) =>
                 {
-                    renderIds.Add((int)value[1]);
+                    renderIds.Add((long)value[1]);
                 })
                 .Returns(Task.CompletedTask);
             var circuitClient = new CircuitClientProxy(initialClient.Object, "connection0");
@@ -68,18 +68,17 @@ namespace Microsoft.AspNetCore.Components.Browser.Rendering
                 builder.AddContent(1, "some text");
                 builder.CloseElement();
             });
-            
 
             var client = new Mock<IClientProxy>();
             client.Setup(c => c.SendCoreAsync(It.IsAny<string>(), It.IsAny<object[]>(), It.IsAny<CancellationToken>()))
                 .Callback((string name, object[] value, CancellationToken token) =>
                 {
-                    renderIds.Add((int)value[1]);
+                    renderIds.Add((long)value[1]);
                 })
                 .Returns(Task.CompletedTask);
             var componentId = renderer.AssignRootComponentId(component);
             component.TriggerRender();
-            renderer.OnRenderCompleted(1, null);
+            renderer.OnRenderCompleted(2, null);
 
             circuitClient.SetDisconnected();
             component.TriggerRender();
@@ -88,14 +87,16 @@ namespace Microsoft.AspNetCore.Components.Browser.Rendering
             // Act
             circuitClient.Transfer(client.Object, "new-connection");
             var task = renderer.ProcessBufferedRenderBatches();
-            foreach (var id in renderIds)
+
+            foreach (var id in renderIds.ToArray())
             {
                 renderer.OnRenderCompleted(id, null);
             }
-            await task;
 
             // Assert
-            client.Verify(c => c.SendCoreAsync("JS.RenderBatch", It.IsAny<object[]>(), It.IsAny<CancellationToken>()), Times.Exactly(2));
+            Assert.True(task.Wait(5000), "One or more render batches werent acknowledged");
+
+            await task;
         }
 
         private RemoteRenderer GetRemoteRenderer(IServiceProvider serviceProvider, CircuitClientProxy circuitClientProxy)

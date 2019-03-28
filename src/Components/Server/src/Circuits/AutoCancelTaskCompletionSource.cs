@@ -15,12 +15,18 @@ namespace Microsoft.AspNetCore.Components.Server.Circuits
     {
         private readonly TaskCompletionSource<T> _completionSource;
         private readonly CancellationTokenSource _timeoutSource;
+        private readonly int _timeoutMilliseconds;
 
         public AutoCancelTaskCompletionSource(int timeoutMilliseconds)
         {
             _completionSource = new TaskCompletionSource<T>();
             _timeoutSource = new CancellationTokenSource();
-            _timeoutSource.CancelAfter(timeoutMilliseconds);
+            _timeoutMilliseconds = timeoutMilliseconds;
+        }
+
+        public void StartTimeout()
+        {
+            _timeoutSource.CancelAfter(_timeoutMilliseconds);
             _timeoutSource.Token.Register(() => _completionSource.TrySetCanceled());
         }
 
@@ -37,6 +43,14 @@ namespace Microsoft.AspNetCore.Components.Server.Circuits
         public void TrySetException(Exception exception)
         {
             if (_completionSource.TrySetException(exception))
+            {
+                _timeoutSource.Dispose(); // We're not going to time out
+            }
+        }
+
+        internal void TrySetCanceled()
+        {
+            if (_completionSource.TrySetCanceled())
             {
                 _timeoutSource.Dispose(); // We're not going to time out
             }

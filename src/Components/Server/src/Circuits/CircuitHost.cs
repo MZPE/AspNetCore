@@ -97,6 +97,7 @@ namespace Microsoft.AspNetCore.Components.Server.Circuits
 
         public Task<RenderedHtmlResult> PrerenderComponentAsync(Type componentType, ParameterCollection parameters)
         {
+            _initialized = true;
             return Dispatcher.InvokeAsync(async () =>
             {
                 var result = await Renderer.RenderComponentAsync(componentType, parameters);
@@ -260,7 +261,7 @@ namespace Microsoft.AspNetCore.Components.Server.Circuits
             }));
 
             _scope.Dispose();
-            Renderer.Dispose();
+            await Renderer.Invoke(() => Renderer.Dispose());
         }
 
         private void AssertInitialized()

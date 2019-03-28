@@ -2,6 +2,7 @@
 // Licensed under the Apache License, Version 2.0. See License.txt in the project root for license information.
 
 using Microsoft.AspNetCore.Builder;
+using Microsoft.AspNetCore.Components.Server;
 using Microsoft.AspNetCore.Components.Server.Circuits;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.Extensions.DependencyInjection;
@@ -35,7 +36,10 @@ namespace ComponentsApp.Server
             app.UseEndpoints(endpoints =>
             {
                 endpoints.MapRazorPages();
-                endpoints.MapComponentHub<App.App>("app");
+                endpoints.MapControllers();
+                endpoints.MapHub<ComponentHub>("/dynamic/_blazor");
+                endpoints.MapComponentHub<App.App>(selector: "app");
+                endpoints.MapFallbackToPage("/Index");
             });
         }
     }

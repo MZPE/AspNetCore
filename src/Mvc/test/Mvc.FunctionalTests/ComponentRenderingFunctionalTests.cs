@@ -99,7 +99,7 @@ namespace Microsoft.AspNetCore.Mvc.FunctionalTests
             Assert.Equal(HttpStatusCode.OK, response.StatusCode);
             var content = await response.Content.ReadAsStringAsync();
 
-            AssertComponent("\n<p>Hello world!</p>", "Greetings", content);
+            AssertComponent("<p>Hello world!</p>", "Greetings", content, unwrap: true);
         }
 
         [Fact]
@@ -115,7 +115,7 @@ namespace Microsoft.AspNetCore.Mvc.FunctionalTests
             Assert.Equal(HttpStatusCode.OK, response.StatusCode);
             var content = await response.Content.ReadAsStringAsync();
 
-            AssertComponent("\nRouter component\n<p>Routed successfully</p>", "Routing", content);
+            AssertComponent("Router component\n<p>Routed successfully</p>", "Routing", content, unwrap: true);
         }
 
         [Fact]
@@ -196,11 +196,12 @@ namespace Microsoft.AspNetCore.Mvc.FunctionalTests
             AssertComponent(expectedHtml, "FetchData", content);
         }
 
-        private void AssertComponent(string expectedConent, string divId, string responseContent)
+        private void AssertComponent(string expectedConent, string divId, string responseContent, bool unwrap = false)
         {
             var parser = new HtmlParser();
             var htmlDocument = parser.Parse(responseContent);
             var div = htmlDocument.Body.QuerySelector($"#{divId}");
+            div = unwrap ? div.FirstElementChild : div;
             Assert.Equal(
                 expectedConent.Replace("\r\n","\n"),
                 div.InnerHtml.Replace("\r\n","\n"));

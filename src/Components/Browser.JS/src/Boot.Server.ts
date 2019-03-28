@@ -29,6 +29,11 @@ async function boot() {
     if (circuitIds.indexOf(circuitId!) === -1) {
       circuitIds.push(circuitId!);
     }
+
+    for (let i = 0; i < circuitIds.length; i++) {
+      const id = circuitIds[i];
+      console.log(`Discovered circuit ${id}`);
+    }
     const selector = `[data-component-id="${componentId}"][data-circuit-id="${circuitId}"][data-renderer-id="${rendererId}"]`;
     attachRootComponentToElement(Number.parseInt(rendererId!), selector, Number.parseInt(componentId!));
   }
@@ -41,6 +46,9 @@ async function boot() {
     uriHelperFunctions.getLocationHref(),
     uriHelperFunctions.getBaseURI()
   );
+  if(!circuitId){
+    console.log(`No preregistered components to render.`);
+  }
 
   const reconnect = async () => {
     const reconnection = await initializeConnection(circuitHandlers);
@@ -58,7 +66,9 @@ async function boot() {
 
   const reconnectTask = reconnect();
 
-  circuitIds.push(circuitId);
+  if (!!circuitId) {
+    circuitIds.push(circuitId);
+  }
 
   await reconnectTask;
 }

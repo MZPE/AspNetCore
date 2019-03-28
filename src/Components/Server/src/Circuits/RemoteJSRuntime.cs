@@ -9,7 +9,7 @@ namespace Microsoft.AspNetCore.Components.Server.Circuits
 {
     internal class RemoteJSRuntime : JSRuntimeBase
     {
-        private IClientProxy _clientProxy;
+        private CircuitClientProxy _clientProxy;
 
         internal void Initialize(CircuitClientProxy clientProxy)
         {
@@ -18,7 +18,7 @@ namespace Microsoft.AspNetCore.Components.Server.Circuits
 
         protected override void BeginInvokeJS(long asyncHandle, string identifier, string argsJson)
         {
-            if (_clientProxy == CircuitClientProxy.OfflineClient)
+            if (!_clientProxy.Connected)
             {
                 throw new InvalidOperationException("JavaScript interop calls cannot be issued at this time. This is because the component is being " +
                     "prerendered and the page has not yet loaded in the browser or because the circuit is currently disconnected. " +

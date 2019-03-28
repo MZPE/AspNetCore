@@ -3,6 +3,7 @@
 
 using System;
 using System.Linq;
+using System.Threading.Tasks;
 using Microsoft.AspNetCore.Components.E2ETest.Infrastructure;
 using Microsoft.AspNetCore.Components.E2ETest.Infrastructure.ServerFixtures;
 using Microsoft.AspNetCore.E2ETesting;
@@ -159,6 +160,15 @@ window.Blazor._internal.forceCloseConnection();");
             // Verify it continues to tick
             new WebDriverWait(Browser, TimeSpan.FromSeconds(10)).Until(
                 _ => element.Text != currentValue);
+        }
+
+        [Fact]
+        public async Task ReconectsAfterPrerenderingContent()
+        {
+            Navigate("/?Component=HelloWorld", noReload: false);
+            await Task.Delay(500);
+            Browser.FindElement(By.TagName("button")).Click();
+            Browser.Equal("Nice to meet you Dan Roth", () => Browser.FindElement(By.Id("message")).Text);
         }
 
         private void WaitUntilLoaded()

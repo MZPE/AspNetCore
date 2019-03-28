@@ -1,19 +1,42 @@
-@page "{*clientroutes}"
+@page
 @using ComponentsApp.App
 
 <!DOCTYPE html>
 <html>
 <head>
+    @functions{
+        string basePath = "/";
+        string framework = "_framework/components.server.js";
+        string component = "";
+    }
+    @{
+        if (Request.Query.ContainsKey("Component"))
+        {
+            component = Request.Query["Component"];
+            framework = "/" + framework;
+            basePath = "/dynamic/";
+        }
+    }
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width">
     <title>Razor Components</title>
-    <base href="/" />
-    <link href="css/bootstrap/bootstrap.min.css" rel="stylesheet" />
-    <link href="css/site.css" rel="stylesheet" />
+    <base href="@basePath" />
+    @if(component == "")
+    {    
+        <link href="css/bootstrap/bootstrap.min.css" rel="stylesheet" />
+        <link href="css/site.css" rel="stylesheet" />
+    }
 </head>
 <body>
-    <app>@(await Html.RenderComponentAsync<App>())</app>
+    @if (component == "HelloWorld")
+    {
+        <text>@(await Html.RenderComponentAsync<HelloWorld>(new { Name = "Dan Roth" }))</text>
+    }
+    else
+    {
+        <app>Loading...</app>
+    }
 
-    <script src="_framework/components.server.js"></script>
+    <script src="@framework"></script>
 </body>
 </html>
