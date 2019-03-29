@@ -2,13 +2,11 @@ import '@dotnet/jsinterop';
 import './GlobalExports';
 import * as signalR from '@aspnet/signalr';
 import { MessagePackHubProtocol } from '@aspnet/signalr-protocol-msgpack';
-import { OutOfProcessRenderBatch } from './Rendering/RenderBatch/OutOfProcessRenderBatch';
-import { internalFunctions as uriHelperFunctions } from './Services/UriHelper';
-import { renderBatch } from './Rendering/Renderer';
 import { fetchBootConfigAsync, loadEmbeddedResourcesAsync } from './BootCommon';
 import { CircuitHandler } from './Platform/Circuits/CircuitHandler';
 import { AutoReconnectCircuitHandler } from './Platform/Circuits/AutoReconnectCircuitHandler';
-import { attachRootComponentToElement } from './Rendering/Renderer';
+import CircuitRegistry from './Platform/Circuits/CircuitRegistry';
+import RenderQueue, { BatchStatus } from './Platform/Circuits/RenderQueue';
 
 async function boot() {
   const circuitHandlers: CircuitHandler[] = [new AutoReconnectCircuitHandler()];
@@ -21,40 +19,26 @@ async function boot() {
 
   const initialConnection = await initializeConnection(circuitHandlers);
 
-  var circuitIds: string[] = [];
-  var prerenderedCircuits = document.querySelectorAll("[data-component-id][data-circuit-id][data-renderer-id]");
-  for (let i = 0; i < prerenderedCircuits.length; i++) {
-    const element = prerenderedCircuits[i] as HTMLElement;
-    const { componentId, circuitId, rendererId } = element.dataset;
-    if (circuitIds.indexOf(circuitId!) === -1) {
-      circuitIds.push(circuitId!);
-    }
-
-    for (let i = 0; i < circuitIds.length; i++) {
-      const id = circuitIds[i];
-      console.log(`Discovered circuit ${id}`);
-    }
-    const selector = `[data-component-id="${componentId}"][data-circuit-id="${circuitId}"][data-renderer-id="${rendererId}"]`;
-    attachRootComponentToElement(Number.parseInt(rendererId!), selector, Number.parseInt(componentId!));
+  const circuits = CircuitRegistry.discoverPrerenderedCircuits(document);
+  for (let i = 0; i < circuits.length; i++) {
+    const circuit = circuits[i];
+    circuit.initialize();
   }
-
 
   // Ensure any embedded resources have been loaded before starting the app
   await embeddedResourcesPromise;
-  const circuitId = await initialConnection.invoke<string>(
-    'StartCircuit',
-    uriHelperFunctions.getLocationHref(),
-    uriHelperFunctions.getBaseURI()
-  );
-  if(!circuitId){
+
+  const startCircuit = await CircuitRegistry.startCircuit(initialConnection);
+
+  if (!startCircuit) {
     console.log(`No preregistered components to render.`);
   }
 
   const reconnect = async () => {
     const reconnection = await initializeConnection(circuitHandlers);
-    var results = await Promise.all(circuitIds.map(id => reconnection.invoke<boolean>('ConnectCircuit', id)))
+    var results = await Promise.all(circuits.map(circuit => circuit.reconnect(reconnection)));
 
-    if (!results.reduce((current, next) => current && next, true)) {
+    if (reconnectionFailed(results)) {
       return false;
     }
 
@@ -66,11 +50,15 @@ async function boot() {
 
   const reconnectTask = reconnect();
 
-  if (!!circuitId) {
-    circuitIds.push(circuitId);
+  if (!!startCircuit) {
+    circuits.push(startCircuit);
   }
 
   await reconnectTask;
+
+  function reconnectionFailed(results: boolean[]) {
+    return !results.reduce((current, next) => current && next, true);
+  }
 }
 
 async function initializeConnection(circuitHandlers: CircuitHandler[]): Promise<signalR.HubConnection> {
@@ -82,20 +70,14 @@ async function initializeConnection(circuitHandlers: CircuitHandler[]): Promise<
 
   connection.on('JS.BeginInvokeJS', DotNet.jsCallDispatcher.beginInvokeJSFromDotNet);
   connection.on('JS.RenderBatch', (browserRendererId: number, renderId: number, batchData: Uint8Array) => {
-    try {
-      console.log(`Render batch ${renderId} for renderer ${browserRendererId}.`);
-      RenderTracker.trackRender(browserRendererId, renderId, batchData);
-      for (let [nextId, nextData] = RenderTracker.getNextBatchToRender(browserRendererId);
-        !!nextId && nextData !== undefined;
-        [nextId, nextData] = RenderTracker.getNextBatchToRender(browserRendererId)) {
-        renderBatch(browserRendererId, new OutOfProcessRenderBatch(nextData));
-        completeBatch(browserRendererId, nextId);
-      }
-    } catch (ex) {
-      // If there's a rendering exception, notify server *and* throw on client
-      connection.send('OnRenderCompleted', renderId, ex.toString());
-      throw ex;
+    const queue = RenderQueue.getOrCreateQueue(browserRendererId);
+
+    const result = queue.enqueue(renderId, batchData);
+    if (result === BatchStatus.Processed) {
+      connection.send('OnRenderCompleted', renderId);
     }
+
+    queue.renderPendingBatches(connection);
   });
 
   connection.onclose(error => circuitHandlers.forEach(h => h.onConnectionDown && h.onConnectionDown(error)));
@@ -116,17 +98,6 @@ async function initializeConnection(circuitHandlers: CircuitHandler[]): Promise<
   });
 
   return connection;
-
-  async function completeBatch(browserRendererId: number, renderId: number) {
-    for (let i = 0; i < 3; i++) {
-      try {
-        await connection.send('OnRenderCompleted', renderId, null);
-      }
-      catch {
-        console.log(`Failed to deliver completion notification for render '${renderId}' on attempt '${i}'.`);
-      }
-    }
-  }
 }
 
 function unhandledError(connection: signalR.HubConnection, err: Error) {
@@ -138,48 +109,6 @@ function unhandledError(connection: signalR.HubConnection, err: Error) {
   if (connection) {
     connection.stop();
   }
-}
-
-class RenderTracker {
-  private static _trackedRenders = new Map<number, RendererRecord>();
-
-  static getNextBatchToRender(browserRendererId: number): [number | undefined, Uint8Array | undefined] {
-    const renderRecord = this._trackedRenders.get(browserRendererId)!;
-    const { pendingRenders, nextRenderId } = renderRecord;
-    const nextRenderBatch = pendingRenders.get(nextRenderId);
-    if (nextRenderBatch !== undefined) {
-      pendingRenders.delete(nextRenderId);
-      renderRecord.nextRenderId++;
-      console.log(`Rendering batch '${nextRenderId}'`);
-      return [nextRenderId, nextRenderBatch];
-    } else {
-      return [undefined, undefined];
-    }
-  }
-
-  public static trackRender(browserRendererId: number, renderId: number, data: Uint8Array) {
-    const browserRendererMap = this._trackedRenders.get(browserRendererId) ||
-      { nextRenderId: 2, pendingRenders: new Map<number, Uint8Array>() };
-
-    this._trackedRenders.set(browserRendererId, browserRendererMap);
-    if (renderId < browserRendererMap.nextRenderId) {
-      // The server probably didn't get our ack in time and resent the batch.
-      // TODO: Ack again that this render was completed. The server will also contain
-      // logic to skip duplicate acks.
-      return;
-    }
-    // This might be the next batch to render or another batch further in the future if we lost
-    // a render on the way here.
-    // We are assuming here that renders with the same renderId will always be equal.
-    // We could check whether the render with the current id is already queued and check for
-    // it to be identical, but I don't think it's worth it.
-    browserRendererMap.pendingRenders.set(renderId, data);
-  }
-}
-
-interface RendererRecord {
-  nextRenderId: number;
-  pendingRenders: Map<number, Uint8Array>;
 }
 
 boot();
