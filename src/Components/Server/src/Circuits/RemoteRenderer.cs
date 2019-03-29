@@ -3,6 +3,7 @@
 
 using System;
 using System.Collections.Concurrent;
+using System.Linq;
 using System.Text.Encodings.Web;
 using System.Threading;
 using System.Threading.Tasks;
@@ -17,9 +18,9 @@ namespace Microsoft.AspNetCore.Components.Browser.Rendering
 {
     internal class RemoteRenderer : HtmlRenderer
     {
-        private const int MaxBatchSendAttempts = 3;
-        private static readonly TimeSpan SendMessageRetryInterval = TimeSpan.FromSeconds(10);
-        private static readonly TimeSpan SendMessageAcknowledgeInterval = TimeSpan.FromSeconds(1);
+        internal const int MaxBatchSendAttempts = 3;
+        internal static readonly TimeSpan SendMessageRetryInterval = TimeSpan.FromSeconds(10);
+        internal static readonly TimeSpan SendMessageAcknowledgeInterval = TimeSpan.FromSeconds(1);
 
         private readonly IJSRuntime _jsRuntime;
         private readonly CircuitClientProxy _client;
@@ -153,20 +154,10 @@ namespace Microsoft.AspNetCore.Components.Browser.Rendering
             return pendingRender.CompletionSource.Task;
         }
 
-        public async Task ProcessBufferedRenderBatches()
+        public Task ProcessBufferedRenderBatches()
         {
-            // Upon reconnection we send all the pending batches (we'll let the client sort the order out)
-            foreach (var batch in PendingRenderBatches)
-            {
-                if (!_client.Connected)
-                {
-                    // The server may discover that the client disconnected while we're attempting to write empty rendered batches.
-                    // Discontinue writing in this event.
-                    break;
-                }
-
-                await ErrorHandledWrite(WriteBatchBytesAsync(batch));
-            }
+            // Upon reconnection we send all the pending batches (we'll let the client sort the order out) 
+            return Task.WhenAll(PendingRenderBatches.Select(b => ErrorHandledWrite(WriteBatchBytesAsync(b))));
 
             async Task ErrorHandledWrite(Task batch)
             {
@@ -215,12 +206,9 @@ namespace Microsoft.AspNetCore.Components.Browser.Rendering
                 catch (Exception e)
                 {
                     Log.SendBatchDataFailed(_logger, e);
-                    if (currentAttempt > 0)
-                    {
-                        // Wait 10 seconds after we tried to send the payload, then check that that the client is still connected and
-                        // that we haven't received any ack from the client in the mean-time to retry.
-                        await Task.Delay(SendMessageRetryInterval);
-                    }
+                    // Wait 10 seconds after we tried to send the payload, then check that that the client is still connected and
+                    // that we haven't received any ack from the client in the mean-time to retry.
+                    await Task.Delay(SendMessageRetryInterval);
                 }
 
                 currentAttempt++;
