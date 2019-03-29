@@ -8,7 +8,7 @@ namespace Microsoft.AspNetCore.Blazor.Services.Test
 {
     public class WebAssemblyUriHelperTest
     {
-        private WebAssemblyUriHelper _uriHelper = new WebAssemblyUriHelper(initialize: false);
+        private WebAssemblyUriHelper _uriHelper = new WebAssemblyUriHelper();
 
         [Theory]
         [InlineData("scheme://host/", "scheme://host/")]

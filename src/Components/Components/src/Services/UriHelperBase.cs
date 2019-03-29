@@ -70,8 +70,8 @@ namespace Microsoft.AspNetCore.Components.Services
         protected abstract void NavigateToCore(string uri, bool forceLoad);
 
         /// <summary>
-        /// Called to initialize BaseURI and current URI before those values the first time.
-        /// Override this method to dynamically calculate the those values.
+        /// Called to initialize BaseURI and current URI before these values are used for the first time.
+        /// Override this method to dynamically calculate these values.
         /// </summary>
         public virtual void InitializeState(string uriAbsolute, string baseUriAbsolute)
         {
@@ -93,6 +93,13 @@ namespace Microsoft.AspNetCore.Components.Services
 
             SetAbsoluteUri(uriAbsolute);
             SetAbsoluteBaseUri(baseUriAbsolute);
+        }
+
+        /// <summary>
+        /// Allows derived classes to lazyly self initialize.
+        /// </summary>
+        protected virtual void Initialize()
+        {
         }
 
         /// <summary>
@@ -205,9 +212,10 @@ namespace Microsoft.AspNetCore.Components.Services
 
         private void EnsureInitialized()
         {
+            Initialize();
             if (!_isInitialized)
             {
-                throw new InvalidOperationException($"'{this.GetType().Name}' has not been initialized.");
+                throw new InvalidOperationException($"'{GetType().Name}' has not been initialized.");
             }
         }
     }

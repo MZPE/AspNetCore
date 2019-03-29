@@ -16,20 +16,16 @@ namespace Microsoft.AspNetCore.Blazor.Services
         /// <summary>
         /// Gets the instance of <see cref="WebAssemblyUriHelper"/>.
         /// </summary>
-        public static readonly WebAssemblyUriHelper Instance = new WebAssemblyUriHelper(initialize: true);
+        public static readonly WebAssemblyUriHelper Instance = new WebAssemblyUriHelper();
 
         // For simplicity we force public consumption of the BrowserUriHelper through
         // a singleton. Only a single instance can be updated by the browser through
         // interop. We can construct instances for testing.
-        internal WebAssemblyUriHelper(bool initialize)
+        internal WebAssemblyUriHelper()
         {
-            if (initialize)
-            {
-                AttachJsRuntime();
-            }
         }
 
-        private void AttachJsRuntime()
+        protected override void Initialize()
         {
             WebAssemblyJSRuntime.Instance.Invoke<object>(
                 Interop.EnableNavigationInterception,
