@@ -8,15 +8,12 @@ using System.Text;
 using System.Text.RegularExpressions;
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.Builder;
-using Microsoft.AspNetCore.Components.Server;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Http;
-using Microsoft.AspNetCore.Http.Features;
 using Microsoft.AspNetCore.Routing;
 using Microsoft.AspNetCore.Routing.Internal;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
-using MvcSandbox.Components;
 
 namespace MvcSandbox
 {
@@ -29,7 +26,6 @@ namespace MvcSandbox
             {
                 options.ConstraintMap["slugify"] = typeof(SlugifyParameterTransformer);
             });
-
             services.AddRazorComponents();
             services.AddMvc()
                 .AddRazorRuntimeCompilation()
@@ -75,12 +71,8 @@ namespace MvcSandbox
 
                 builder.MapControllers();
                 builder.MapRazorPages();
-
-                //builder.MapComponentHub<MvcSandbox.Components.App>("app");
-                builder.MapHub<ComponentHub>(ComponentHub.DefaultPath);
+                builder.MapComponentHub<MvcSandbox.Components.App>("app");
                 builder.MapFallbackToPage("/Components");
-
-                //builder.MapFallbackToController("Index", "Home");
             });
         }
 
