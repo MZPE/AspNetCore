@@ -97,7 +97,6 @@ namespace Microsoft.AspNetCore.Components.Server.Circuits
 
         public Task<RenderedHtmlResult> PrerenderComponentAsync(Type componentType, ParameterCollection parameters)
         {
-            _initialized = true;
             return Dispatcher.InvokeAsync(async () =>
             {
                 var result = await Renderer.RenderComponentAsync(componentType, parameters);
@@ -106,6 +105,11 @@ namespace Microsoft.AspNetCore.Components.Server.Circuits
 
                 return result;
             });
+        }
+
+        internal void Initialized()
+        {
+            _initialized = true;
         }
 
         public async Task InitializeAsync(CancellationToken cancellationToken)

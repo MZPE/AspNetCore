@@ -212,7 +212,11 @@ namespace Microsoft.AspNetCore.Components.Services
 
         private void EnsureInitialized()
         {
-            Initialize();
+            if (!_isInitialized)
+            {
+                Initialize();
+            }
+
             if (!_isInitialized)
             {
                 throw new InvalidOperationException($"'{GetType().Name}' has not been initialized.");

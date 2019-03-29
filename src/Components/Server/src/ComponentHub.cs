@@ -102,6 +102,7 @@ namespace Microsoft.AspNetCore.Components.Server
             var circuitHost = await _circuitRegistry.ConnectAsync(circuitId, Clients.Caller, Context.ConnectionId, Context.ConnectionAborted);
             if (circuitHost != null)
             {
+                circuitHost.Initialized();
                 CircuitHost = circuitHost;
 
                 // Dispatch any buffered renders we accumulated during a disconnect.
