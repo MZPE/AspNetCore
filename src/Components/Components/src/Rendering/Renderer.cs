@@ -470,9 +470,14 @@ namespace Microsoft.AspNetCore.Components.Rendering
 
             if (!updateDisplayTask.IsCompleted)
             {
-                var copy = new RenderTreeDiff[updatedComponents.Count];
-                Array.Copy(updatedComponents.Array, 0, copy, 0, updatedComponents.Count);
-                return updateDisplayTask.ContinueWith(t => InvokeRenderCompletedCalls(new ArrayRange<RenderTreeDiff>(copy, copy.Length), t));
+                var updatedComponentsId = new int[updatedComponents.Count];
+                var updatedComponentsArray = updatedComponents.Array;
+                for (int i = 0; i < updatedComponentsId.Length; i++)
+                {
+                    updatedComponentsId[i] = updatedComponentsArray[i].ComponentId;
+                }
+
+                return InvokeAfterUpdateDisplayCompleted(updateDisplayTask, updatedComponentsId);
             }
 
             List<Task> batch = null;
@@ -482,6 +487,52 @@ namespace Microsoft.AspNetCore.Components.Rendering
                 var componentState = GetOptionalComponentState(array[i].ComponentId);
                 if (componentState != null)
                 {
+                    ProcessComponent(componentState, batch);
+                }
+            }
+
+            return batch != null ?
+                Task.WhenAll(batch) :
+                Task.CompletedTask;
+
+            async Task InvokeAfterUpdateDisplayCompleted(Task updateDisplayTask, int[] updatedComponents)
+            {
+                try
+                {
+                    await updateDisplayTask;
+                }
+                catch when (updateDisplayTask.IsCanceled)
+                {
+                    return;
+                }
+                catch when (updateDisplayTask.IsFaulted)
+                {
+                    HandleException(updateDisplayTask.Exception);
+                    return;
+                }
+
+                List<Task> batch = null;
+                var array = updatedComponents;
+                for (var i = 0; i < updatedComponents.Length; i++)
+                {
+                    var componentState = GetOptionalComponentState(array[i]);
+                    if (componentState != null)
+                    {
+                        ProcessComponent(componentState, batch);
+                    }
+                }
+
+                var result = batch != null ?
+                    Task.WhenAll(batch) :
+                    Task.CompletedTask;
+
+                await result;
+            }
+
+            void ProcessComponent(ComponentState state, List<Task> batch)
+            {
+                if (state != null)
+                {
                     // The component might be rendered and disposed in the same batch (if its parent
                     // was rendered later in the batch, and removed the child from the tree).
                     // This can also happen between batches if the UI takes some time to update and within
@@ -489,7 +540,7 @@ namespace Microsoft.AspNetCore.Components.Rendering
                     // render it in a later batch.
                     // In any of the two cases mentioned happens, OnAfterRenderAsync won't run but that is
                     // ok.
-                    var task = componentState.NotifyRenderCompletedAsync();
+                    var task = state.NotifyRenderCompletedAsync();
 
                     // We want to avoid allocations per rendering. Avoid allocating a state machine or an accumulator
                     // unless we absolutely have to.
@@ -498,12 +549,12 @@ namespace Microsoft.AspNetCore.Components.Rendering
                         if (task.Status == TaskStatus.RanToCompletion || task.Status == TaskStatus.Canceled)
                         {
                             // Nothing to do here.
-                            continue;
+                            return;
                         }
                         else if (task.Status == TaskStatus.Faulted)
                         {
                             HandleException(task.Exception);
-                            continue;
+                            return;
                         }
                     }
 
@@ -513,10 +564,6 @@ namespace Microsoft.AspNetCore.Components.Rendering
                     batch.Add(GetErrorHandledTask(task));
                 }
             }
-
-            return batch != null ?
-                Task.WhenAll(batch) :
-                Task.CompletedTask;
         }
 
         private void RenderInExistingBatch(RenderQueueEntry renderQueueEntry)

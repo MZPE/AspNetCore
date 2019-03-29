@@ -6,8 +6,8 @@
 @functions {
     ElementRef myInput;
 
-    protected override async Task OnAfterRenderAsync()
+    protected override void OnAfterRender()
     {
-        await JSRuntime.InvokeAsync<object>("setElementValue", myInput, "Value set after render");
+        JSRuntime.InvokeAsync<object>("setElementValue", myInput, "Value set after render");
     }
 }

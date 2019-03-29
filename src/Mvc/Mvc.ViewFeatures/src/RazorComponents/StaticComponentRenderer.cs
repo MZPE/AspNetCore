@@ -65,7 +65,11 @@ namespace Microsoft.AspNetCore.Mvc.ViewFeatures.RazorComponents
 
         private string GetContextBaseUri(HttpRequest request)
         {
-            return UriHelper.BuildAbsolute(request.Scheme, request.Host, request.PathBase);
+            var result = UriHelper.BuildAbsolute(request.Scheme, request.Host, request.PathBase);
+            
+            // PathBase may be "/" or "/some/thing", but to be a well-formed base URI
+            // it has to end with a trailing slash
+            return result.EndsWith("/") ? result : result += "/";
         }
     }
 }
