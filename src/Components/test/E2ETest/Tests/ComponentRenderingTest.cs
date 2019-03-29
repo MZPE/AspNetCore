@@ -456,12 +456,10 @@ namespace Microsoft.AspNetCore.Components.E2ETest.Tests
         }
 
         [Fact]
-        public async Task CanUseJsInteropForRefElementsDuringOnAfterRender()
+        public void CanUseJsInteropForRefElementsDuringOnAfterRender()
         {
             var appElement = MountTestComponent<AfterRenderInteropComponent>();
-            await Task.Delay(1000);
-            var inputElement = appElement.FindElement(By.TagName("input"));
-            Assert.Equal("Value set after render", inputElement.GetAttribute("value"));
+            Browser.Equal("Value set after render", () => Browser.FindElement(By.TagName("input")).GetAttribute("value"));
         }
 
         [Fact]

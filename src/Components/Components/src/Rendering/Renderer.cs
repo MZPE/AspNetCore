@@ -460,7 +460,8 @@ namespace Microsoft.AspNetCore.Components.Rendering
                 // to the renderer being disposed)
                 return Task.CompletedTask;
             }
-            if (updateDisplayTask.IsFaulted) {
+            if (updateDisplayTask.IsFaulted)
+            {
                 // The display update failed so we don't care any more about running on render completed
                 // fallbacks as the entire rendering process is going to be torn down.
                 HandleException(updateDisplayTask.Exception);
@@ -469,7 +470,9 @@ namespace Microsoft.AspNetCore.Components.Rendering
 
             if (!updateDisplayTask.IsCompleted)
             {
-                return updateDisplayTask.ContinueWith(t => InvokeRenderCompletedCalls(updatedComponents, t));
+                var copy = new RenderTreeDiff[updatedComponents.Count];
+                Array.Copy(updatedComponents.Array, 0, copy, 0, updatedComponents.Count);
+                return updateDisplayTask.ContinueWith(t => InvokeRenderCompletedCalls(new ArrayRange<RenderTreeDiff>(copy, copy.Length), t));
             }
 
             List<Task> batch = null;
