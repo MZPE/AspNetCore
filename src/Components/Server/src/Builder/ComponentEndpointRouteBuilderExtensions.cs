@@ -16,10 +16,9 @@ namespace Microsoft.AspNetCore.Builder
         /// Maps the SignalR <see cref="ComponentHub"/> to the path <paramref name="path"/> and associates
         /// the component <typeparamref name="TComponent"/> to this hub instance as the given DOM <paramref name="selector"/>.
         /// </summary>
-        /// <typeparam name="TComponent">The first <see cref="IComponent"/> associated with this <see cref="ComponentHub"/>.</typeparam>
         /// <param name="endpoints">The <see cref="IEndpointRouteBuilder"/>.</param>
         /// <returns>The <see cref="IEndpointConventionBuilder"/>.</returns>
-        public static IEndpointConventionBuilder MapComponentHub<TComponent>(this IEndpointRouteBuilder endpoints)
+        public static IEndpointConventionBuilder MapComponentHub(this IEndpointRouteBuilder endpoints)
         {
             if (endpoints == null)
             {
