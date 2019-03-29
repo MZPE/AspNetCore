@@ -116,15 +116,6 @@ namespace Microsoft.AspNetCore.Components.Server.Circuits
                 {
                     SetCurrentCircuitHost(this);
                     _initialized = true; // We're ready to accept incoming JSInterop calls from here on
-                    var (componentType, domElementSelector, prerendered) = Descriptors[i];
-                    if (!prerendered)
-                    {
-                        await Renderer.AddComponentAsync(componentType, domElementSelector);
-                    }
-                }
-
-                    await OnCircuitOpenedAsync(cancellationToken);
-                    await OnConnectionUpAsync(cancellationToken);
 
                     // We add the root components *after* the circuit is flagged as open.
                     // That's because AddComponentAsync waits for quiescence, which can take
@@ -132,9 +123,15 @@ namespace Microsoft.AspNetCore.Components.Server.Circuits
                     // processing incoming JSInterop calls or similar.
                     for (var i = 0; i < Descriptors.Count; i++)
                     {
-                        var (componentType, domElementSelector) = Descriptors[i];
-                        await Renderer.AddComponentAsync(componentType, domElementSelector);
+                        var (componentType, domElementSelector, prerendered) = Descriptors[i];
+                        if (!prerendered)
+                        {
+                            await Renderer.AddComponentAsync(componentType, domElementSelector);
+                        }
                     }
+
+                    await OnCircuitOpenedAsync(cancellationToken);
+                    await OnConnectionUpAsync(cancellationToken);
                 }
                 catch (Exception ex)
                 {
