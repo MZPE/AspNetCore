@@ -25,7 +25,7 @@ namespace Microsoft.AspNetCore.Blazor.Services
         {
         }
 
-        protected override void Initialize()
+        protected override void EnsureInitialized()
         {
             WebAssemblyJSRuntime.Instance.Invoke<object>(
                 Interop.EnableNavigationInterception,

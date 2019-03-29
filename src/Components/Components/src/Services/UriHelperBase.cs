@@ -19,7 +19,7 @@ namespace Microsoft.AspNetCore.Components.Services
         {
             add
             {
-                EnsureInitialized();
+                AssertInitialized();
                 _onLocationChanged += value;
             }
             remove
@@ -57,7 +57,7 @@ namespace Microsoft.AspNetCore.Components.Services
         /// <param name="forceLoad">If true, bypasses client-side routing and forces the browser to load the new page from the server, whether or not the URI would normally be handled by the client-side router.</param>
         public void NavigateTo(string uri, bool forceLoad)
         {
-            EnsureInitialized();
+            AssertInitialized();
             NavigateToCore(uri, forceLoad);
         }
 
@@ -96,9 +96,9 @@ namespace Microsoft.AspNetCore.Components.Services
         }
 
         /// <summary>
-        /// Allows derived classes to lazyly self initialize.
+        /// Allows derived classes to lazyly self initialize. It does nothing unless overriden.
         /// </summary>
-        protected virtual void Initialize()
+        protected virtual void EnsureInitialized()
         {
         }
 
@@ -108,7 +108,7 @@ namespace Microsoft.AspNetCore.Components.Services
         /// <returns>The current absolute URI.</returns>
         public string GetAbsoluteUri()
         {
-            EnsureInitialized();
+            AssertInitialized();
             return _uri;
         }
 
@@ -120,7 +120,7 @@ namespace Microsoft.AspNetCore.Components.Services
         /// <returns>The URI prefix, which has a trailing slash.</returns>
         public virtual string GetBaseUri()
         {
-            EnsureInitialized();
+            AssertInitialized();
             return _baseUriString;
         }
 
@@ -132,7 +132,7 @@ namespace Microsoft.AspNetCore.Components.Services
         /// <returns>The absolute URI.</returns>
         public Uri ToAbsoluteUri(string href)
         {
-            EnsureInitialized();
+            AssertInitialized();
             return new Uri(_baseUri, href);
         }
 
@@ -210,11 +210,11 @@ namespace Microsoft.AspNetCore.Components.Services
             _onLocationChanged?.Invoke(this, _uri);
         }
 
-        private void EnsureInitialized()
+        private void AssertInitialized()
         {
             if (!_isInitialized)
             {
-                Initialize();
+                EnsureInitialized();
             }
 
             if (!_isInitialized)
