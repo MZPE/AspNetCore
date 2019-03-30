@@ -26,16 +26,16 @@ export default class RenderQueue {
     return newQueue;
   }
 
-  public enqueue(batchId, batchData) {
-    if (this.nextRenderId < batchId) {
+  public enqueue(receivedBatchId, receivedBatchData) {
+    if (receivedBatchId < this.nextRenderId) {
       return BatchStatus.Processed;
     }
 
-    if (this.pendingRenders.has(batchId)) {
+    if (this.pendingRenders.has(receivedBatchId)) {
       return BatchStatus.Pending;
     }
 
-    this.pendingRenders.set(batchId, batchData);
+    this.pendingRenders.set(receivedBatchId, receivedBatchData);
     return BatchStatus.Queued;
   }
 
