@@ -56,7 +56,7 @@ namespace Microsoft.AspNetCore.Components.Server.Circuits
             {
                 var result = _circuitFactory.CreateCircuitHost(
                     context,
-                    client: CircuitClientProxy.OfflineClient,
+                    client: CircuitClientProxy.CreateOffline(),
                     GetFullUri(context.Request),
                     GetFullBaseUri(context.Request));
 

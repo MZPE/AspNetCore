@@ -46,7 +46,7 @@ namespace Microsoft.AspNetCore.Components.Server.Circuits
             componentContext.Initialize(client);
 
             var uriHelper = (RemoteUriHelper)scope.ServiceProvider.GetRequiredService<IUriHelper>();
-            if (client != CircuitClientProxy.OfflineClient)
+            if (client.Connected)
             {
                 uriHelper.AttachJsRuntime(jsRuntime);
                 uriHelper.InitializeState(
@@ -92,7 +92,7 @@ namespace Microsoft.AspNetCore.Components.Server.Circuits
 
         internal static IList<ComponentDescriptor> ResolveComponentMetadata(HttpContext httpContext, CircuitClientProxy client)
         {
-            if (client == CircuitClientProxy.OfflineClient)
+            if (!client.Connected)
             {
                 // This is the prerendering case. Descriptors will be registered by the prerenderer.
                 return new List<ComponentDescriptor>();

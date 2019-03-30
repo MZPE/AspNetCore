@@ -15,7 +15,7 @@ async function boot() {
   // Replace creation with in development to see
   // traces in the browser.
   // In the future we will allow for users to configure this.
-  const logger = NullLogger.instance;
+  const logger = new ConsoleLogger(LogLevel.Debug);
 
   logger.log(LogLevel.Information, 'Booting blazor.');
 
@@ -86,7 +86,7 @@ async function initializeConnection(circuitHandlers: CircuitHandler[], logger: I
 
     const result = queue.enqueue(renderId, batchData);
     if (result === BatchStatus.Processed) {
-      connection.send('OnRenderCompleted', renderId);
+      connection.send('OnRenderCompleted', renderId, null);
     }
 
     queue.renderPendingBatches(connection);

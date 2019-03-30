@@ -34,7 +34,7 @@
     }
     else
     {
-        <app>Loading...</app>
+        <text>@(await Html.RenderComponentAsync<App>())</text>
     }
 
     <script src="@framework"></script>

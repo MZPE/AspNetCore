@@ -55,6 +55,10 @@ export default class RenderQueue {
         this.logger.log(LogLevel.Information, `Applying batch ${batchId}.`);
         renderBatch(this.browserRendererId, new OutOfProcessRenderBatch(batchData));
         this.completeBatch(connection, batchId);
+
+        next = this.tryDequeueNextBatch();
+        batchId = next.batchId;
+        batchData = next.batchData;
       }
     } catch (ex) {
       this.logger.log(LogLevel.Error, `There was an error applying batch ${batchId}.`);

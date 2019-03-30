@@ -4,6 +4,7 @@
 using System;
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.Components.Server.Circuits;
+using Microsoft.AspNetCore.Components.Services;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.SignalR;
 using Microsoft.Extensions.DependencyInjection;
@@ -102,8 +103,10 @@ namespace Microsoft.AspNetCore.Components.Server
             var circuitHost = await _circuitRegistry.ConnectAsync(circuitId, Clients.Caller, Context.ConnectionId, Context.ConnectionAborted);
             if (circuitHost != null)
             {
-                circuitHost.Initialized();
                 CircuitHost = circuitHost;
+
+                circuitHost.Initialized();
+                InitializeServicesAfterPrerender(circuitHost);
 
                 // Dispatch any buffered renders we accumulated during a disconnect.
                 // Note that while the rendering is async, we cannot await it here. The Task returned by ProcessBufferedRenderBatches relies on
@@ -115,12 +118,21 @@ namespace Microsoft.AspNetCore.Components.Server
             return false;
         }
 
+        private static void InitializeServicesAfterPrerender(CircuitHost circuitHost)
+        {
+            var uriHelper = (RemoteUriHelper)circuitHost.Services.GetRequiredService<IUriHelper>();
+            if (!uriHelper.HasAttachedJSRuntime)
+            {
+                uriHelper.AttachJsRuntime(circuitHost.JSRuntime);
+            }
+        }
+
         /// <summary>
         /// Intended for framework use only. Applications should not call this method directly.
         /// </summary>
-        public void BeginInvokeDotNetFromJS(string callId, string assemblyName, string methodIdentifier, long dotNetObjectId, string argsJson)
+        public Task BeginInvokeDotNetFromJS(string callId, string assemblyName, string methodIdentifier, long dotNetObjectId, string argsJson)
         {
-            EnsureCircuitHost().BeginInvokeDotNetFromJS(callId, assemblyName, methodIdentifier, dotNetObjectId, argsJson);
+            return EnsureCircuitHost().BeginInvokeDotNetFromJS(callId, assemblyName, methodIdentifier, dotNetObjectId, argsJson);
         }
 
         /// <summary>

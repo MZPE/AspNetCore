@@ -21,7 +21,7 @@ namespace Microsoft.AspNetCore.Components.Browser.Rendering
     {
         protected override HtmlRenderer GetHtmlRenderer(IServiceProvider serviceProvider)
         {
-            return GetRemoteRenderer(serviceProvider, CircuitClientProxy.OfflineClient);
+            return GetRemoteRenderer(serviceProvider, CircuitClientProxy.CreateOffline());
         }
 
         [Fact]
@@ -337,7 +337,7 @@ namespace Microsoft.AspNetCore.Components.Browser.Rendering
 
             var renderer = GetRemoteRenderer(
                 serviceProvider,
-                CircuitClientProxy.OfflineClient);
+                CircuitClientProxy.CreateOffline());
 
             // Act
             var first = await renderer.RenderComponentAsync<TestComponent>(ParameterCollection.Empty);

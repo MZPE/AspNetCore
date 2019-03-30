@@ -4,6 +4,7 @@
 using System;
 using Microsoft.AspNetCore.Components.Services;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Logging;
 using Microsoft.JSInterop;
 using Interop = Microsoft.AspNetCore.Components.Browser.BrowserUriHelperInterop;
 
@@ -15,6 +16,14 @@ namespace Microsoft.AspNetCore.Components.Server.Circuits
     public class RemoteUriHelper : UriHelperBase
     {
         private IJSRuntime _jsRuntime;
+        private readonly ILogger<RemoteUriHelper> _logger;
+
+        public RemoteUriHelper(ILogger<RemoteUriHelper> logger)
+        {
+            _logger = logger;
+        }
+
+        public bool HasAttachedJSRuntime => _jsRuntime != null;
 
         /// <summary>
         /// Initializes the <see cref="RemoteUriHelper"/>.
