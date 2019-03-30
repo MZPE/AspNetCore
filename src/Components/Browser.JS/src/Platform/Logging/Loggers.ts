@@ -17,7 +17,7 @@ export class ConsoleLogger implements ILogger {
     this.minimumLogLevel = minimumLogLevel;
   }
 
-  public log(logLevel: LogLevel, message: string): void {
+  public log(logLevel: LogLevel, message: string | Error): void {
     if (logLevel >= this.minimumLogLevel) {
       switch (logLevel) {
         case LogLevel.Critical:

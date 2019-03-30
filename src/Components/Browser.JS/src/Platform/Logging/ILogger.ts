@@ -30,5 +30,5 @@ export interface ILogger {
    * @param {LogLevel} logLevel The severity level of the message.
    * @param {string} message The message.
    */
-  log(logLevel: LogLevel, message: string): void;
+  log(logLevel: LogLevel, message: string | Error): void;
 }

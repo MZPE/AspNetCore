@@ -12,14 +12,15 @@ import { LogLevel, ILogger } from './Platform/Logging/ILogger';
 
 async function boot() {
 
-  // Replace creation with in development to see
-  // traces in the browser.
+  // For development.
+  // Simply put a break point here and modify the log level during
+  // development to get traces.
   // In the future we will allow for users to configure this.
-  const logger = new ConsoleLogger(LogLevel.Debug);
+  const logger = new ConsoleLogger(LogLevel.Error);
 
   logger.log(LogLevel.Information, 'Booting blazor.');
 
-  const circuitHandlers: CircuitHandler[] = [new AutoReconnectCircuitHandler()];
+  const circuitHandlers: CircuitHandler[] = [new AutoReconnectCircuitHandler(logger)];
   window['Blazor'].circuitHandlers = circuitHandlers;
 
   // In the background, start loading the boot config and any embedded resources
@@ -41,7 +42,7 @@ async function boot() {
   const startCircuit = await CircuitRegistry.startCircuit(initialConnection);
 
   if (!startCircuit) {
-    console.log(`No preregistered components to render.`);
+    logger.log(LogLevel.Information, `No preregistered components to render.`);
   }
 
   const reconnect = async () => {
@@ -93,14 +94,14 @@ async function initializeConnection(circuitHandlers: CircuitHandler[], logger: I
   });
 
   connection.onclose(error => circuitHandlers.forEach(h => h.onConnectionDown && h.onConnectionDown(error)));
-  connection.on('JS.Error', error => unhandledError(connection, error));
+  connection.on('JS.Error', error => unhandledError(connection, error,logger));
 
   window['Blazor']._internal.forceCloseConnection = () => connection.stop();
 
   try {
     await connection.start();
   } catch (ex) {
-    unhandledError(connection, ex);
+    unhandledError(connection, ex, logger);
   }
 
   DotNet.attachDispatcher({
@@ -112,8 +113,8 @@ async function initializeConnection(circuitHandlers: CircuitHandler[], logger: I
   return connection;
 }
 
-function unhandledError(connection: signalR.HubConnection, err: Error) {
-  console.error(err);
+function unhandledError(connection: signalR.HubConnection, err: Error, logger: ILogger) {
+  logger.log(LogLevel.Error, err);
 
   // Disconnect on errors.
   //

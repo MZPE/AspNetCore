@@ -2,13 +2,14 @@ import { CircuitHandler } from './CircuitHandler';
 import { UserSpecifiedDisplay } from './UserSpecifiedDisplay';
 import { DefaultReconnectDisplay } from './DefaultReconnectDisplay';
 import { ReconnectDisplay } from './ReconnectDisplay';
+import { ILogger, LogLevel } from '../Logging/ILogger';
 export class AutoReconnectCircuitHandler implements CircuitHandler {
   static readonly MaxRetries = 5;
   static readonly RetryInterval = 3000;
   static readonly DialogId = 'components-reconnect-modal';
   reconnectDisplay: ReconnectDisplay;
 
-  constructor() {
+  constructor(public logger: ILogger) {
     this.reconnectDisplay = new DefaultReconnectDisplay(document);
     document.addEventListener('DOMContentLoaded', () => {
       const modal = document.getElementById(AutoReconnectCircuitHandler.DialogId);
@@ -38,7 +39,7 @@ export class AutoReconnectCircuitHandler implements CircuitHandler {
         }
         return;
       } catch (err) {
-        console.error(err);
+        this.logger.log(LogLevel.Error, err);
       }
     }
 
