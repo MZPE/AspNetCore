@@ -4,11 +4,11 @@
 using System;
 using System.Net;
 using System.Net.Http;
+using System.Text.RegularExpressions;
 using System.Threading.Tasks;
 using AngleSharp.Parser.Html;
 using BasicWebSite;
 using BasicWebSite.Services;
-using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Mvc.Testing;
 using Microsoft.Extensions.DependencyInjection;
 using Xunit;
@@ -17,6 +17,10 @@ namespace Microsoft.AspNetCore.Mvc.FunctionalTests
 {
     public class ComponentRenderingFunctionalTests : IClassFixture<MvcTestFixture<BasicWebSite.StartupWithoutEndpointRouting>>
     {
+        private static readonly Regex ContentWrapperRegex = new Regex(
+            $"<!-- M.A.C.Component:{{\"circuitId\":\"[^\"]+\",\"rendererId\":\"\\d+\",\"componentId\":\"\\d+\"}} -->(?<content>.*)<!-- M.A.C.Component: \\d+ -->",
+            RegexOptions.Compiled | RegexOptions.Singleline, TimeSpan.FromSeconds(1)); // Treat the entire input string as a single line
+
         public ComponentRenderingFunctionalTests(MvcTestFixture<BasicWebSite.StartupWithoutEndpointRouting> fixture)
         {
             Factory = fixture;
@@ -196,15 +200,22 @@ namespace Microsoft.AspNetCore.Mvc.FunctionalTests
             AssertComponent(expectedHtml, "FetchData", content);
         }
 
-        private void AssertComponent(string expectedConent, string divId, string responseContent, bool unwrap = false)
+        private void AssertComponent(string expectedContent, string divId, string responseContent, bool unwrap = false)
         {
             var parser = new HtmlParser();
             var htmlDocument = parser.Parse(responseContent);
             var div = htmlDocument.Body.QuerySelector($"#{divId}");
-            div = unwrap ? div.FirstElementChild : div;
+            var content = unwrap ? GetUnwrappedContent(div.InnerHtml) : div.InnerHtml;
             Assert.Equal(
-                expectedConent.Replace("\r\n","\n"),
-                div.InnerHtml.Replace("\r\n","\n"));
+                expectedContent.Replace("\r\n","\n"),
+                content.Replace("\r\n","\n"));
+        }
+
+        private string GetUnwrappedContent(string rawResult)
+        {
+            return ContentWrapperRegex.Match(rawResult)
+                .Groups["content"].Value
+                .Replace("\r\n", "\n");
         }
 
         // A simple delegating handler used in setting up test services so that we can configure

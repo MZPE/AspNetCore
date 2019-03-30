@@ -6,6 +6,7 @@ using System.Threading.Tasks;
 using Microsoft.AspNetCore.Components;
 using Microsoft.AspNetCore.Components.RenderTree;
 using Microsoft.AspNetCore.Components.Services;
+using Microsoft.AspNetCore.Html;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc.Rendering;
 using Microsoft.Extensions.DependencyInjection;
@@ -17,16 +18,8 @@ namespace Microsoft.AspNetCore.Mvc.ViewFeatures
 {
     public class HtmlHelperComponentExtensionsTests
     {
-        // FOR NOW: The circuit prerenderer will wrap the content inside a div tag with a few data attributes
-        // data-circuit-id data-renderer-id data-component-id that are used for reconnecting to the running
-        // prerendered components.
-        // In the future we will lift this limitation by emiting comment nodes instead 
-        // <!-- M.A.C START circuit-id="..." renderer-id="..." component-id="..." --!> <!-- M.A.C END --!>
-        // Currently to render an interactive component or to prerender one and reconnect you need to provide a selector
-        // and an HTML tag in the document for the component to be plugged-in to, so we are not removing any existing capability
-        // by taking over the rendered element.
         private static readonly Regex ContentWrapperRegex = new Regex(
-            "^<div data-circuit-id=\"[^\"]+\" data-renderer-id=\"0\" data-component-id=\"0\">(?<content>.*)</div>$",
+            $"<!-- M.A.C.Component:{{\"circuitId\":\"[^\"]+\",\"rendererId\":\"0\",\"componentId\":\"0\"}} -->(?<content>.*)<!-- M.A.C.Component: 0 -->",
             RegexOptions.Compiled | RegexOptions.Singleline, TimeSpan.FromSeconds(1)); // Treat the entire input string as a single line
 
         [Fact]
@@ -50,17 +43,13 @@ namespace Microsoft.AspNetCore.Mvc.ViewFeatures
         {
             // Arrange
             var helper = CreateHelper();
-            var writer = new StringWriter();
 
             // Act
             var result = await helper.RenderComponentAsync<TestComponent>();
-            result.WriteTo(writer, HtmlEncoder.Default);
-            var content = writer.ToString();
-            var unwrappedConent = ContentWrapperRegex.Match(content);
+            var unwrappedContent = GetUnwrappedContent(result);
 
             // Assert
-            Assert.True(unwrappedConent.Success);
-            Assert.Equal("<h1>Hello world!</h1>", unwrappedConent.Groups["content"].Value);
+            Assert.Equal("<h1>Hello world!</h1>", unwrappedContent);
         }
 
         [Fact]
@@ -68,20 +57,17 @@ namespace Microsoft.AspNetCore.Mvc.ViewFeatures
         {
             // Arrange
             var helper = CreateHelper();
-            var writer = new StringWriter();
 
             // Act
             var result = await helper.RenderComponentAsync<GreetingComponent>(new
             {
-                Name = "Steve"
+                Name = "Guest"
             });
-            result.WriteTo(writer, HtmlEncoder.Default);
-            var content = writer.ToString();
-            var unwrappedConent = ContentWrapperRegex.Match(content);
+
+            var unwrappedContent = GetUnwrappedContent(result);
 
             // Assert
-            Assert.True(unwrappedConent.Success);
-            Assert.Equal("<p>Hello Steve!</p>", unwrappedConent.Groups["content"].Value);
+            Assert.Equal("<p>Hello Guest!</p>", unwrappedContent);
         }
 
         [Fact]
@@ -168,7 +154,6 @@ namespace Microsoft.AspNetCore.Mvc.ViewFeatures
         {
             // Arrange
             var helper = CreateHelper();
-            var writer = new StringWriter();
             var expectedContent = @"<table>
 <thead>
 <tr>
@@ -214,15 +199,21 @@ namespace Microsoft.AspNetCore.Mvc.ViewFeatures
 
             // Act
             var result = await helper.RenderComponentAsync<AsyncComponent>();
-            result.WriteTo(writer, HtmlEncoder.Default);
-            var content = writer.ToString();
-            var unwrappedConent = ContentWrapperRegex.Match(content);
+            var unwrappedContent = GetUnwrappedContent(result);
 
             // Assert
-            Assert.True(unwrappedConent.Success);
-            Assert.Equal(expectedContent.Replace("\r\n", "\n"), unwrappedConent.Groups["content"].Value);
+            Assert.Equal(expectedContent.Replace("\r\n", "\n"), unwrappedContent);
         }
 
+        private string GetUnwrappedContent(IHtmlContent rawResult)
+        {
+            var writer = new StringWriter();
+            rawResult.WriteTo(writer, HtmlEncoder.Default);
+
+            return ContentWrapperRegex.Match(writer.ToString())
+                .Groups["content"].Value
+                .Replace("\r\n", "\n");
+        }
 
         private class TestComponent : IComponent
         {

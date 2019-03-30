@@ -19,17 +19,6 @@ export default class CircuitRegistry {
       }
     }
 
-    // var prerenderedCircuits = document
-    //   .querySelectorAll('[data-component-id][data-circuit-id][data-renderer-id]');
-
-    // for (let i = 0; i < prerenderedCircuits.length; i++) {
-    //   const element = prerenderedCircuits[i] as HTMLElement;
-    //   const { componentId, circuitId, rendererId } = element.dataset;
-    //   if (!circuits.some(c => c.circuitId == circuitId!)) {
-    //     circuits.push(new ComponentEntry(componentId, circuitId, rendererId));
-    //   }
-    // }
-
     return circuits;
   }
 
@@ -45,6 +34,9 @@ export default class CircuitRegistry {
 }
 
 function reportInvalidPair(pair: ComponentResult) {
+  let nodeStartText = pair.start.node && pair.start.node.textContent;
+  let nodeEndText = pair.end && pair.end.node && pair.end.node.textContent;
+  console.warn(`Invalid component definition found ${nodeStartText} - ${nodeEndText}`);
 }
 
 export class ComponentEntry {
