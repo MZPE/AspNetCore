@@ -1,13 +1,15 @@
 import { System_Object, System_String, System_Array, MethodHandle, Pointer } from '../Platform/Platform';
 import { platform } from '../Environment';
 import { RenderBatch } from './RenderBatch/RenderBatch';
-import { BrowserRenderer } from './BrowserRenderer';
+import { BrowserRenderer, StartEndPair } from './BrowserRenderer';
 
 type BrowserRendererRegistry = { [browserRendererId: number]: BrowserRenderer };
 const browserRenderers: BrowserRendererRegistry = {};
 
-export function attachRootComponentToElement(browserRendererId: number, elementSelector: string, componentId: number) {
-  const element = document.querySelector(elementSelector);
+export function attachRootComponentToElement(browserRendererId: number, elementSelector: string | StartEndPair, componentId: number) {
+
+  const { start, end } = elementSelector as StartEndPair;
+  const element = start && end ? elementSelector as StartEndPair : document.querySelector(elementSelector as string);
   if (!element) {
     throw new Error(`Could not find any element matching selector '${elementSelector}'.`);
   }

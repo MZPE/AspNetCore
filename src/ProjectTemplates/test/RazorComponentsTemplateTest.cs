@@ -24,7 +24,7 @@ namespace Templates.Test
         public Project Project { get; private set; }
 
         [Fact]
-        public async Task RazorComponentsTemplateWorksAsync()
+        public async Task RazorComponentsTemplateWorks()
         {
             Project = await ProjectFactory.GetOrCreateProject("razorcomponents", Output);
 

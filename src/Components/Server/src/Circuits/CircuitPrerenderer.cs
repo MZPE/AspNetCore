@@ -40,8 +40,12 @@ namespace Microsoft.AspNetCore.Components.Server.Circuits
                 Prerendered = true
             });
 
-            var result = new[] { $"<div data-circuit-id=\"{circuitHost.CircuitId}\" data-renderer-id=\"{circuitHost.Renderer.Id}\" data-component-id=\"{renderResult.ComponentId}\">" }
-                .Concat(renderResult.Tokens).Concat(new[] { "</div>" });
+            var result = new[] {
+                $"<!-- M.A.C.Component:{{\"circuitId\":\"{circuitHost.CircuitId}\",\"rendererId\":\"{circuitHost.Renderer.Id}\",\"componentId\":\"{renderResult.ComponentId}\"}} -->",
+            }.Concat(renderResult.Tokens).Concat(
+                new[] {
+                    $"<!-- M.A.C.Component: {renderResult.ComponentId} -->"
+                });
 
             return new ComponentPrerenderResult(result);
         }

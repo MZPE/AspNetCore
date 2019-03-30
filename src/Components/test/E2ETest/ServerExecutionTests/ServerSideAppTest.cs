@@ -26,10 +26,12 @@ namespace Microsoft.AspNetCore.Components.E2ETest.ServerExecutionTests
             _serverFixture.BuildWebHostMethod = ComponentsApp.Server.Program.BuildWebHost;
         }
 
-        protected override void InitializeAsyncCore()
+
+        public override async Task InitializeAsync()
         {
+            await base.InitializeAsync();
             Navigate("/", noReload: false);
-            WaitUntilLoaded();
+            await Task.Delay(2000);
         }
 
         [Fact]
@@ -163,18 +165,10 @@ window.Blazor._internal.forceCloseConnection();");
         }
 
         [Fact]
-        public async Task ReconectsAfterPrerenderingContent()
+        public void RendersContinueAfterPrerendering()
         {
-            Navigate("/?Component=HelloWorld", noReload: false);
-            await Task.Delay(500);
-            Browser.FindElement(By.TagName("button")).Click();
-            Browser.Equal("Nice to meet you Guest", () => Browser.FindElement(By.Id("message")).Text);
-        }
-
-        private void WaitUntilLoaded()
-        {
-            new WebDriverWait(Browser, TimeSpan.FromSeconds(30)).Until(
-                driver => driver.FindElement(By.TagName("app")).Text != "Loading...");
+            Browser.FindElement(By.LinkText("Greeter")).Click();
+            Browser.Equal("Hello Guest", () => Browser.FindElement(By.ClassName("greeting")).Text);
         }
     }
 }

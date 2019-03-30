@@ -28,12 +28,36 @@
 const logicalChildrenPropname = createSymbolOrFallback('_blazorLogicalChildren');
 const logicalParentPropname = createSymbolOrFallback('_blazorLogicalParent');
 
-export function toLogicalElement(element: Element, allowExistingContents?: boolean) {
+export function toLogicalElement(element: Node, allowExistingContents?: boolean) {
   // Normally it's good to assert that the element has started empty, because that's the usual
   // situation and we probably have a bug if it's not. But for the element that contain prerendered
   // root components, we want to let them keep their content until we replace it.
   if (element.childNodes.length > 0 && !allowExistingContents) {
     throw new Error('New logical elements must start empty, or allowExistingContents must be true');
+  }
+
+  // Now that we support start/end comments as component delimiters we are going to be setting up
+  // adding the components rendered output as siblings of the start/end tags (between).
+  // For that to work, we need to appropriately configure the parent element to be a logical element
+  // with all their children being the child elements.
+  // For example, imagine you have
+  // <app>
+  // <div><p>Static content</p></div>
+  // <!-- start component
+  // <!-- end component
+  // <footer>Some other content</footer>
+  // <app>
+  // We want the parent element to be something like
+  // *app
+  // |- *div
+  // |- *component
+  // |- *footer
+  if(element instanceof Comment && allowExistingContents){
+    let parent = element.parentNode!;
+    let parentLogicalElement = toLogicalElement(parent,  true);
+    let children = getLogicalChildrenArray(parentLogicalElement);
+    Array.from(parent.childNodes).forEach(n => children.push(n as any as LogicalElement));
+    element[logicalParentPropname] = parentLogicalElement;
   }
 
   element[logicalChildrenPropname] = [];
@@ -59,14 +83,14 @@ export function insertLogicalChild(child: Node, parent: LogicalElement, childInd
     }
   }
 
-  if (getLogicalParent(childAsLogicalElement)) {
-    // Likewise, we could easily support this scenario too (in this 'if' block, just splice
-    // out 'child' from the logical children array of its previous logical parent by using
-    // Array.prototype.indexOf to determine its previous sibling index).
-    // But again, since there's not currently any scenario that would use it, we would not
-    // have any test coverage for such an implementation.
-    throw new Error('Not implemented: moving existing logical children');
-  }
+  // if (getLogicalParent(childAsLogicalElement)) {
+  //   // Likewise, we could easily support this scenario too (in this 'if' block, just splice
+  //   // out 'child' from the logical children array of its previous logical parent by using
+  //   // Array.prototype.indexOf to determine its previous sibling index).
+  //   // But again, since there's not currently any scenario that would use it, we would not
+  //   // have any test coverage for such an implementation.
+  //   throw new Error('Not implemented: moving existing logical children');
+  // }
 
   const newSiblings = getLogicalChildrenArray(parent);
   if (childIndex < newSiblings.length) {
@@ -115,7 +139,7 @@ export function isSvgElement(element: LogicalElement) {
   return getClosestDomElement(element).namespaceURI === 'http://www.w3.org/2000/svg';
 }
 
-function getLogicalChildrenArray(element: LogicalElement) {
+export function getLogicalChildrenArray(element: LogicalElement) {
   return element[logicalChildrenPropname] as LogicalElement[];
 }
 

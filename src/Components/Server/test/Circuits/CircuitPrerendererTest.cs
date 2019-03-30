@@ -29,7 +29,7 @@ namespace Microsoft.AspNetCore.Components.Server.Tests.Circuits
         // and an HTML tag in the document for the component to be plugged-in to, so we are not removing any existing capability
         // by taking over the rendered element.
         private static readonly Regex ContentWrapperRegex = new Regex(
-            "^<div data-circuit-id=\"[^\"]+\" data-renderer-id=\"0\" data-component-id=\"0\">(?<content>.*)</div>$",
+            $"<!-- M.A.C.Component:{{\"circuitId\":\"[^\"]+\",\"rendererId\":\"0\",\"componentId\":\"0\"}} -->(?<content>.*)<!-- M.A.C.Component: 0 -->",
             RegexOptions.Compiled | RegexOptions.Singleline, TimeSpan.FromSeconds(1)); // Treat the entire input string as a single line
 
         // Because CircuitPrerenderer is a point of integration with HttpContext,

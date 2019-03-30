@@ -1,13 +1,14 @@
 import { RenderBatch, ArraySegment, RenderTreeEdit, RenderTreeFrame, EditType, FrameType, ArrayValues } from './RenderBatch/RenderBatch';
 import { EventDelegator } from './EventDelegator';
 import { EventForDotNet, UIEventArgs } from './EventForDotNet';
-import { LogicalElement, toLogicalElement, insertLogicalChild, removeLogicalChild, getLogicalParent, getLogicalChild, createAndInsertLogicalContainer, isSvgElement } from './LogicalElements';
+import { LogicalElement, toLogicalElement, insertLogicalChild, removeLogicalChild, getLogicalParent, getLogicalChild, createAndInsertLogicalContainer, isSvgElement, getLogicalChildrenArray } from './LogicalElements';
 import { applyCaptureIdToElement } from './ElementReferenceCapture';
 const selectValuePropname = '_blazorSelectValue';
 const sharedTemplateElemForParsing = document.createElement('template');
 const sharedSvgElemForParsing = document.createElementNS('http://www.w3.org/2000/svg', 'g');
 const preventDefaultEvents: { [eventType: string]: boolean } = { submit: true };
-const rootComponentsPendingFirstRender: { [componentId: number]: Element } = {};
+const rootComponentsPendingFirstRender: { [componentId: number]: Node } = {};
+const rootComponentsEndNodes: { [componentId: number]: Node } = {};
 
 export class BrowserRenderer {
   private eventDelegator: EventDelegator;
@@ -19,10 +20,16 @@ export class BrowserRenderer {
     });
   }
 
-  public attachRootComponentToElement(componentId: number, element: Element) {
-    // 'allowExistingContents' to keep any prerendered content until we do the first client-side render
-    this.attachComponentToElement(componentId, toLogicalElement(element, /* allowExistingContents */ true));
-    rootComponentsPendingFirstRender[componentId] = element;
+  public attachRootComponentToElement(componentId: number, element: Element | StartEndPair) {
+    if (element instanceof Element) {
+      // 'allowExistingContents' to keep any prerendered content until we do the first client-side render
+      this.attachComponentToElement(componentId, toLogicalElement(element, /* allowExistingContents */ true));
+      rootComponentsPendingFirstRender[componentId] = element;
+    } else {
+      this.attachComponentToElement(componentId, toLogicalElement(element.start, /* allowExistingContents */ true));
+      rootComponentsPendingFirstRender[componentId] = element.start;
+      rootComponentsEndNodes[componentId] = element.end;
+    }
   }
 
   public updateComponent(batch: RenderBatch, componentId: number, edits: ArraySegment<RenderTreeEdit>, referenceFrames: ArrayValues<RenderTreeFrame>) {
@@ -34,8 +41,14 @@ export class BrowserRenderer {
     // On the first render for each root component, clear any existing content (e.g., prerendered)
     const rootElementToClear = rootComponentsPendingFirstRender[componentId];
     if (rootElementToClear) {
-      delete rootComponentsPendingFirstRender[componentId];
-      clearElement(rootElementToClear);
+      if (rootElementToClear.nodeType !== Node.COMMENT_NODE) {
+        delete rootComponentsPendingFirstRender[componentId];
+        clearElement(rootElementToClear as Element);
+      } else {
+        delete rootComponentsPendingFirstRender[componentId];
+        const rootElementToClearEnd = rootComponentsEndNodes[componentId];
+        clearBetween(rootElementToClear, rootElementToClearEnd);
+      }
     }
 
     this.applyEdits(batch, element, 0, edits, referenceFrames);
@@ -336,6 +349,11 @@ export class BrowserRenderer {
   }
 }
 
+export interface StartEndPair {
+  start: Node;
+  end: Node;
+}
+
 function parseMarkup(markup: string, isSvg: boolean) {
   if (isSvg) {
     sharedSvgElemForParsing.innerHTML = markup || ' ';
@@ -383,5 +401,16 @@ function clearElement(element: Element) {
   let childNode: Node | null;
   while (childNode = element.firstChild) {
     element.removeChild(childNode);
+  }
+}
+
+function clearBetween(start: Node, end: Node) {
+  let parent = start.parentNode!;
+  let logicalParent = getLogicalParent(start as any as LogicalElement)!;
+  let children = getLogicalChildrenArray(logicalParent);
+  let removeStart = children.indexOf(start as any as LogicalElement) + 1;
+  let endIndex = children.indexOf(end as any as LogicalElement);
+  for (let i = removeStart; i < endIndex; i++) {
+    removeLogicalChild(logicalParent, removeStart);
   }
 }
