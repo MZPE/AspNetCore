@@ -49,12 +49,13 @@ namespace Microsoft.AspNetCore.Components.Server.Circuits
             {
                 throw new InvalidOperationException("JavaScript runtime already initialized.");
             }
-
             _jsRuntime = jsRuntime;
             _jsRuntime.InvokeAsync<object>(
                     Interop.EnableNavigationInterception,
                     typeof(RemoteUriHelper).Assembly.GetName().Name,
                     nameof(NotifyLocationChanged));
+
+            _logger.LogInformation($"{nameof(RemoteUriHelper)} initialized.");
         }
 
         /// <summary>
@@ -73,11 +74,15 @@ namespace Microsoft.AspNetCore.Components.Server.Circuits
             var uriHelper = (RemoteUriHelper)circuit.Services.GetRequiredService<IUriHelper>();
 
             uriHelper.SetAbsoluteUri(uriAbsolute);
+
+            uriHelper._logger.LogDebug($"Location changed to '{uriAbsolute}'.");
             uriHelper.TriggerOnLocationChanged();
         }
 
         protected override void NavigateToCore(string uri, bool forceLoad)
         {
+            _logger.LogDebug($"Log debug {uri} force load {forceLoad}.");
+
             if (_jsRuntime == null)
             {
                 throw new InvalidOperationException("Navigation commands can not be issued at this time. This is because the component is being " +

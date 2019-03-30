@@ -11,6 +11,7 @@ using Microsoft.AspNetCore.Components.Services;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Logging.Abstractions;
 using Microsoft.Extensions.Options;
 using Moq;
 using Xunit;
@@ -121,7 +122,7 @@ namespace Microsoft.AspNetCore.Components.Server.Tests.Circuits
                 var serviceCollection = new ServiceCollection();
                 serviceCollection.AddScoped<IUriHelper>(_ =>
                 {
-                    var uriHelper = new RemoteUriHelper();
+                    var uriHelper = new RemoteUriHelper(NullLogger<RemoteUriHelper>.Instance);
                     uriHelper.InitializeState(uriAbsolute, baseUriAbsolute);
                     return uriHelper;
                 });
