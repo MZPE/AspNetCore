@@ -168,7 +168,7 @@ window.Blazor._internal.forceCloseConnection();");
             Navigate("/?Component=HelloWorld", noReload: false);
             await Task.Delay(500);
             Browser.FindElement(By.TagName("button")).Click();
-            Browser.Equal("Nice to meet you Dan Roth", () => Browser.FindElement(By.Id("message")).Text);
+            Browser.Equal("Nice to meet you Guest", () => Browser.FindElement(By.Id("message")).Text);
         }
 
         private void WaitUntilLoaded()

@@ -1,5 +1,6 @@
 import { renderBatch } from "../../Rendering/Renderer";
 import { OutOfProcessRenderBatch } from "../../Rendering/RenderBatch/OutOfProcessRenderBatch";
+import { ILogger, LogLevel } from "../Logging/ILogger";
 
 export enum BatchStatus {
   Pending = 1,
@@ -11,46 +12,53 @@ export default class RenderQueue {
   private static renderQueues = new Map<number, RenderQueue>();
 
   private pendingRenders = new Map<number, Uint8Array>();
-  private nextRenderId = 2;
+  private nextBatchId = 2;
 
-  constructor(public browserRendererId) { }
+  constructor(public browserRendererId: number, public logger: ILogger) { }
 
-  static getOrCreateQueue(browserRendererId: number) {
+  static getOrCreateQueue(browserRendererId: number, logger: ILogger) {
     const queue = this.renderQueues.get(browserRendererId);
     if (!!queue) {
       return queue;
     }
 
-    const newQueue = new RenderQueue(browserRendererId);
+    const newQueue = new RenderQueue(browserRendererId, logger);
     this.renderQueues.set(browserRendererId, newQueue);
     return newQueue;
   }
 
-  public enqueue(receivedBatchId, receivedBatchData) {
-    if (receivedBatchId < this.nextRenderId) {
+  public enqueue(receivedBatchId: number, receivedBatchData: Uint8Array) {
+    if (receivedBatchId < this.nextBatchId) {
+      this.logger.log(LogLevel.Debug, `Batch ${receivedBatchId} already processed. Waiting for batch ${this.nextBatchId}.`);
       return BatchStatus.Processed;
     }
 
     if (this.pendingRenders.has(receivedBatchId)) {
+      this.logger.log(LogLevel.Debug, `Batch ${receivedBatchId} already queued. Waiting for batch ${this.nextBatchId}.`);
       return BatchStatus.Pending;
     }
 
+    this.logger.log(LogLevel.Debug, `Batch ${receivedBatchId} successfully queued.`);
     this.pendingRenders.set(receivedBatchId, receivedBatchData);
     return BatchStatus.Queued;
   }
 
   public renderPendingBatches(connection: signalR.HubConnection) {
-    let { batchId, batchData } = this.tryDequeueNextBatch();
+    let batchId: number | undefined;
+    let batchData: Uint8Array | undefined;
+
     try {
+      let next = this.tryDequeueNextBatch();
+      batchId = next.batchId;
+      batchData = next.batchData;
       while (batchId && batchData) {
+        this.logger.log(LogLevel.Information, `Applying batch ${batchId}.`);
         renderBatch(this.browserRendererId, new OutOfProcessRenderBatch(batchData));
         this.completeBatch(connection, batchId);
-
-        const next = this.tryDequeueNextBatch();
-        batchId = next.batchId;
-        batchData = next.batchData;
       }
     } catch (ex) {
+      this.logger.log(LogLevel.Error, `There was an error applying batch ${batchId}.`);
+
       // If there's a rendering exception, notify server *and* throw on client
       connection.send('OnRenderCompleted', batchId, ex.toString());
       throw ex;
@@ -58,8 +66,8 @@ export default class RenderQueue {
   }
 
   private tryDequeueNextBatch() {
-    const batchId = this.nextRenderId;
-    const batchData = this.pendingRenders.get(this.nextRenderId);
+    const batchId = this.nextBatchId;
+    const batchData = this.pendingRenders.get(this.nextBatchId);
     if (batchData != undefined) {
       this.dequeueBatch();
       return { batchId, batchData };
@@ -69,12 +77,12 @@ export default class RenderQueue {
   }
 
   public getLastBatchid() {
-    return this.nextRenderId - 1;
+    return this.nextBatchId - 1;
   }
 
   private dequeueBatch() {
-    this.pendingRenders.delete(this.nextRenderId);
-    this.nextRenderId++;
+    this.pendingRenders.delete(this.nextBatchId);
+    this.nextBatchId++;
   }
 
   private async completeBatch(connection: signalR.HubConnection, batchId: number) {

@@ -7,8 +7,18 @@ import { CircuitHandler } from './Platform/Circuits/CircuitHandler';
 import { AutoReconnectCircuitHandler } from './Platform/Circuits/AutoReconnectCircuitHandler';
 import CircuitRegistry from './Platform/Circuits/CircuitRegistry';
 import RenderQueue, { BatchStatus } from './Platform/Circuits/RenderQueue';
+import { ConsoleLogger, NullLogger } from './Platform/Logging/Loggers';
+import { LogLevel, ILogger } from './Platform/Logging/ILogger';
 
 async function boot() {
+
+  // Replace creation with in development to see
+  // traces in the browser.
+  // In the future we will allow for users to configure this.
+  const logger = NullLogger.instance;
+
+  logger.log(LogLevel.Information, 'Booting blazor.');
+
   const circuitHandlers: CircuitHandler[] = [new AutoReconnectCircuitHandler()];
   window['Blazor'].circuitHandlers = circuitHandlers;
 
@@ -17,7 +27,7 @@ async function boot() {
     return loadEmbeddedResourcesAsync(bootConfig);
   });
 
-  const initialConnection = await initializeConnection(circuitHandlers);
+  const initialConnection = await initializeConnection(circuitHandlers, logger);
 
   const circuits = CircuitRegistry.discoverPrerenderedCircuits(document);
   for (let i = 0; i < circuits.length; i++) {
@@ -35,7 +45,7 @@ async function boot() {
   }
 
   const reconnect = async () => {
-    const reconnection = await initializeConnection(circuitHandlers);
+    const reconnection = await initializeConnection(circuitHandlers, logger);
     var results = await Promise.all(circuits.map(circuit => circuit.reconnect(reconnection)));
 
     if (reconnectionFailed(results)) {
@@ -61,7 +71,7 @@ async function boot() {
   }
 }
 
-async function initializeConnection(circuitHandlers: CircuitHandler[]): Promise<signalR.HubConnection> {
+async function initializeConnection(circuitHandlers: CircuitHandler[], logger: ILogger): Promise<signalR.HubConnection> {
   const connection = new signalR.HubConnectionBuilder()
     .withUrl('_blazor')
     .withHubProtocol(new MessagePackHubProtocol())
@@ -70,7 +80,9 @@ async function initializeConnection(circuitHandlers: CircuitHandler[]): Promise<
 
   connection.on('JS.BeginInvokeJS', DotNet.jsCallDispatcher.beginInvokeJSFromDotNet);
   connection.on('JS.RenderBatch', (browserRendererId: number, renderId: number, batchData: Uint8Array) => {
-    const queue = RenderQueue.getOrCreateQueue(browserRendererId);
+    logger.log(LogLevel.Information, `Received render batch for ${browserRendererId} with id ${renderId} and ${batchData.byteLength} bytes.`)
+
+    const queue = RenderQueue.getOrCreateQueue(browserRendererId, logger);
 
     const result = queue.enqueue(renderId, batchData);
     if (result === BatchStatus.Processed) {
