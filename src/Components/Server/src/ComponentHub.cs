@@ -128,7 +128,7 @@ namespace Microsoft.AspNetCore.Components.Server
         /// </summary>
         public void OnRenderCompleted(long renderId, string errorMessageOrNull)
         {
-            _logger.LogInformation($"Received confirmation for batch {renderId}");
+            _logger.LogInformation($"Received confirmation for batch {renderId}.");
             EnsureCircuitHost().Renderer.OnRenderCompleted(renderId, errorMessageOrNull);
         }
 

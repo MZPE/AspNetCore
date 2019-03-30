@@ -228,7 +228,7 @@ namespace Microsoft.AspNetCore.Components.Browser.Rendering
             }
         }
 
-        public void OnRenderCompleted(long incommingBatchId, string errorMessageOrNull)
+        public void OnRenderCompleted(long incomingBatchId, string errorMessageOrNull)
         {
             if (_disposing)
             {
@@ -241,27 +241,39 @@ namespace Microsoft.AspNetCore.Components.Browser.Rendering
             while (PendingRenderBatches.TryPeek(out var entry))
             {
                 // Dequeue entries until we sync with the render batch number received.
-                if (incommingBatchId < entry.BatchId)
+                if (incomingBatchId < entry.BatchId)
                 {
-                    _logger.LogInformation($"Incomming batch {incommingBatchId} already acknowledged.");
+                    _logger.LogInformation($"Incoming batch {incomingBatchId} already acknowledged.");
                     // We successfully received an ack for a pending batch left.
                     // Which we already processed so no work.
                     break;
                 }
 
-                // renderId >= entry.id -> Likely we missed an ack from the client.
+                // batchId >= entry.BatchId -> We are in sync or we missed an ack from the client.
                 // We simply catch up as a bigger number means the client already rendered
                 // previous batches successfully.
-                if (incommingBatchId >= entry.BatchId)
+                if (incomingBatchId >= entry.BatchId)
                 {
-                    _logger.LogInformation($"Acknowledging batch {entry.BatchId} ack sequence {incommingBatchId}.");
+                    _logger.LogInformation($"Acknowledging batch {entry.BatchId} ack sequence {incomingBatchId}.");
                     // When the render is completed (success, fail), stop tracking it.
                     // We are the only ones removing things from the queue so Peek+Dequeue is ok here.
                     PendingRenderBatches.TryDequeue(out var _);
-                    CompleteRender(entry.CompletionSource, errorMessageOrNull);
 
-                    if (entry.BatchId == incommingBatchId)
+                    // If we are catching up, then invoke completed renders in the absence of errors.
+                    if ((errorMessageOrNull == null && entry.BatchId < incomingBatchId))
                     {
+                        _logger.LogDebug($"Completing batch {entry.BatchId} without error.");
+                        CompleteRender(entry.CompletionSource, errorMessageOrNull);
+                    }
+
+                    if (entry.BatchId == incomingBatchId)
+                    {
+                        string message = $"Completing batch {entry.BatchId} " +
+                            errorMessageOrNull == null ? "without error." : "with error.";
+
+                        _logger.LogDebug(message);
+                        CompleteRender(entry.CompletionSource, errorMessageOrNull);
+
                         // We cought up.
                         break;
                     }
