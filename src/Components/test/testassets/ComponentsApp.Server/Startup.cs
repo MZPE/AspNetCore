@@ -37,7 +37,6 @@ namespace ComponentsApp.Server
             {
                 endpoints.MapRazorPages();
                 endpoints.MapControllers();
-                endpoints.MapHub<ComponentHub>("/dynamic/_blazor");
                 endpoints.MapComponentHub();
                 endpoints.MapFallbackToPage("/Index");
             });

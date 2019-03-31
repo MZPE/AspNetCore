@@ -44,7 +44,7 @@ namespace Microsoft.AspNetCore.Mvc.FunctionalTests
         }
 
         [Fact]
-        public async Task Renders_BasicComponent_UsingRazorComponents_Prerrenderer()
+        public async Task Renders_BasicComponent_UsingRazorComponents_Prerenderer()
         {
             // Arrange & Act
             var client = CreateClient(Factory
@@ -75,7 +75,7 @@ namespace Microsoft.AspNetCore.Mvc.FunctionalTests
         }
 
         [Fact]
-        public async Task Renders_RoutingComponent_UsingRazorComponents_Prerrenderer()
+        public async Task Renders_RoutingComponent_UsingRazorComponents_Prerenderer()
         {
             // Arrange & Act
             var client = CreateClient(Factory
@@ -91,7 +91,7 @@ namespace Microsoft.AspNetCore.Mvc.FunctionalTests
         }
 
         [Fact]
-        public async Task Renders_BasicComponentInteractive_UsingRazorComponents_Prerrenderer()
+        public async Task Renders_BasicComponentInteractive_UsingRazorComponents_Prerenderer()
         {
             // Arrange & Act
             var client = CreateClient(Factory
@@ -107,7 +107,7 @@ namespace Microsoft.AspNetCore.Mvc.FunctionalTests
         }
 
         [Fact]
-        public async Task Renders_RoutingComponentInteractive_UsingRazorComponents_Prerrenderer()
+        public async Task Renders_RoutingComponentInteractive_UsingRazorComponents_Prerenderer()
         {
             // Arrange & Act
             var client = CreateClient(Factory
@@ -123,7 +123,7 @@ namespace Microsoft.AspNetCore.Mvc.FunctionalTests
         }
 
         [Fact]
-        public async Task Renders_ThrowingComponent_UsingRazorComponents_Prerrenderer()
+        public async Task Renders_ThrowingComponent_UsingRazorComponents_Prerenderer()
         {
             // Arrange & Act
             var client = CreateClient(Factory.WithWebHostBuilder(builder => builder.ConfigureServices(services => services.AddRazorComponents())));

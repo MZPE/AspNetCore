@@ -1,7 +1,6 @@
-import { attachRootComponentToElement } from '../../Rendering/Renderer'
+import { attachRootComponentToElement } from '../../Rendering/Renderer';
 import { internalFunctions as uriHelperFunctions } from '../../Services/UriHelper';
 import { ILogger, LogLevel } from '../Logging/ILogger';
-
 
 interface InvalidEndComponentComment {
   isWellFormed: false;
@@ -82,9 +81,9 @@ export class ComponentEntry {
 
   public initialize(): void {
     if (!this.placeholder.valid) {
-      throw new Error('Can\'t initialize an invalid component.');
+      throw new Error("Can't initialize an invalid component.");
     } else {
-      const startEndPair = { start: this.placeholder.start.node, end: this.placeholder.end.node }
+      const startEndPair = { start: this.placeholder.start.node, end: this.placeholder.end.node };
       attachRootComponentToElement(this.rendererId, startEndPair, this.componentId);
     }
   }
@@ -93,7 +92,6 @@ export class ComponentEntry {
 export default class CircuitRegistry {
 
   public static discoverPrerenderedCircuits(document: Document, logger: ILogger): ComponentEntry [] {
-
     const commentPairs = CircuitRegistry.resolveCommentPairs(document);
     const circuits: ComponentEntry[] = [];
 
@@ -142,7 +140,7 @@ export default class CircuitRegistry {
     const childrenLength = children.length;
     while (i < childrenLength) {
       const currentChildNode = children[i];
-      const startComponent = CircuitRegistry.getComponentStartComment(currentChildNode)
+      const startComponent = CircuitRegistry.getComponentStartComment(currentChildNode);
       if (!startComponent) {
         i++;
         const childResults = CircuitRegistry.resolveCommentPairs(currentChildNode);
@@ -201,7 +199,7 @@ export default class CircuitRegistry {
               circuitId,
               rendererId: -1,
               componentId: -1,
-            }
+            };
           }
         } catch (error) {
           return { isWellFormed: false, kind: ComponentCommentKind.Start };

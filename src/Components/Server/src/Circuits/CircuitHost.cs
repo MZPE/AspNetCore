@@ -146,7 +146,7 @@ namespace Microsoft.AspNetCore.Components.Server.Circuits
             });
         }
 
-        public async Task BeginInvokeDotNetFromJS(string callId, string assemblyName, string methodIdentifier, long dotNetObjectId, string argsJson)
+        public async void BeginInvokeDotNetFromJS(string callId, string assemblyName, string methodIdentifier, long dotNetObjectId, string argsJson)
         {
             AssertInitialized();
 

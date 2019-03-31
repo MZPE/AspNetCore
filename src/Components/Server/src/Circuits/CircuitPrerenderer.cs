@@ -36,7 +36,6 @@ namespace Microsoft.AspNetCore.Components.Server.Circuits
             circuitHost.Descriptors.Add(new ComponentDescriptor
             {
                 ComponentType = prerenderingContext.ComponentType,
-                Selector = $"[data-component-id={renderResult.ComponentId}]",
                 Prerendered = true
             });
 

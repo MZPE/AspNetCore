@@ -105,15 +105,7 @@ namespace Microsoft.AspNetCore.Components.Browser.Rendering
             base.Dispose(true);
             while (PendingRenderBatches.TryDequeue(out var entry))
             {
-                try
-                {
-                    entry.CompletionSource.TrySetCanceled();
-                }
-                catch
-                {
-                    // Swallow the exception as we are disposing
-                    // the renderer.
-                }
+                entry.CompletionSource.TrySetCanceled();
             }
             _rendererRegistry.TryRemove(Id);
         }

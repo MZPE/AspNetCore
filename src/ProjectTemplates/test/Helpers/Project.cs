@@ -16,7 +16,7 @@ using Xunit.Sdk;
 
 namespace Templates.Test.Helpers
 {
-    [DebuggerDisplay("{ToString()},nq")]
+    [DebuggerDisplay("{ToString(),nq}")]
     public class Project
     {
         public const string DefaultFramework = "netcoreapp3.0";

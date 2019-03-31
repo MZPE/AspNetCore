@@ -16,11 +16,11 @@ module.exports = {
     "no-var": "error",
     "prefer-const": "error",
     "quotes": ["error", "single", { "avoidEscape": true }],
-    "semi": "always",
+    "semi": ["error", "always"],
     "semi-style": ["error", "last"],
     "semi-spacing": ["error", { "after": true }],
     "spaced-comment": ["error", "always"],
-    "unicode-bom": "never"
+    "unicode-bom": ["error", "never"]
   },
   globals: {
     DotNet: "readonly"

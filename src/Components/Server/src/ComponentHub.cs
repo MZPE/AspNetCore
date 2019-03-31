@@ -6,6 +6,7 @@ using System.Threading.Tasks;
 using Microsoft.AspNetCore.Components.Server.Circuits;
 using Microsoft.AspNetCore.Components.Services;
 using Microsoft.AspNetCore.Http;
+using Microsoft.AspNetCore.Http.Features;
 using Microsoft.AspNetCore.SignalR;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
@@ -70,7 +71,12 @@ namespace Microsoft.AspNetCore.Components.Server
             var circuitClient = new CircuitClientProxy(Clients.Caller, Context.ConnectionId);
             if (DefaultCircuitFactory.ResolveComponentMetadata(Context.GetHttpContext(), circuitClient).Count == 0)
             {
-                // No components preregistered so return;
+                var endpointFeature = Context.GetHttpContext().Features.Get<IEndpointFeature>();
+                var endpoint = endpointFeature?.Endpoint;
+
+                _logger.LogInformation($"No components registered in the current endpoint '{endpoint.DisplayName}'.");
+
+                // No components preregistered so return. This is totally normal if the components were prerendered.
                 return null;
             }
 
@@ -130,9 +136,9 @@ namespace Microsoft.AspNetCore.Components.Server
         /// <summary>
         /// Intended for framework use only. Applications should not call this method directly.
         /// </summary>
-        public Task BeginInvokeDotNetFromJS(string callId, string assemblyName, string methodIdentifier, long dotNetObjectId, string argsJson)
+        public void BeginInvokeDotNetFromJS(string callId, string assemblyName, string methodIdentifier, long dotNetObjectId, string argsJson)
         {
-            return EnsureCircuitHost().BeginInvokeDotNetFromJS(callId, assemblyName, methodIdentifier, dotNetObjectId, argsJson);
+            EnsureCircuitHost().BeginInvokeDotNetFromJS(callId, assemblyName, methodIdentifier, dotNetObjectId, argsJson);
         }
 
         /// <summary>
@@ -163,7 +169,7 @@ namespace Microsoft.AspNetCore.Components.Server
             finally
             {
                 // Set the circuit disconnected.
-                // This will trigger the timeout that weill eventually dispose the circuit.
+                // This will trigger the timeout that will eventually dispose the circuit.
                 // If we were able to send the notificiation back to the client, it will have
                 // aborted the connection.
                 // We could do this right away if we wanted to, as there's nothing else to do.

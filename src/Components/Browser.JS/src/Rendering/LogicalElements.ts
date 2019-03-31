@@ -53,9 +53,12 @@ export function toLogicalElement(element: Node, allowExistingContents?: boolean)
   // |- *component
   // |- *footer
   if(element instanceof Comment && allowExistingContents){
-    let parent = element.parentNode!;
-    let parentLogicalElement = toLogicalElement(parent,  true);
-    let children = getLogicalChildrenArray(parentLogicalElement);
+    if(!element.parentNode){
+      throw new Error(`Comment not connected to the DOM ${element.textContent}`);
+    }
+    const parent = element.parentNode;
+    const parentLogicalElement = toLogicalElement(parent,  true);
+    const children = getLogicalChildrenArray(parentLogicalElement);
     Array.from(parent.childNodes).forEach(n => children.push(n as any as LogicalElement));
     element[logicalParentPropname] = parentLogicalElement;
   }
@@ -83,14 +86,14 @@ export function insertLogicalChild(child: Node, parent: LogicalElement, childInd
     }
   }
 
-  // if (getLogicalParent(childAsLogicalElement)) {
-  //   // Likewise, we could easily support this scenario too (in this 'if' block, just splice
-  //   // out 'child' from the logical children array of its previous logical parent by using
-  //   // Array.prototype.indexOf to determine its previous sibling index).
-  //   // But again, since there's not currently any scenario that would use it, we would not
-  //   // have any test coverage for such an implementation.
-  //   throw new Error('Not implemented: moving existing logical children');
-  // }
+  if (getLogicalParent(childAsLogicalElement)) {
+    // Likewise, we could easily support this scenario too (in this 'if' block, just splice
+    // out 'child' from the logical children array of its previous logical parent by using
+    // Array.prototype.indexOf to determine its previous sibling index).
+    // But again, since there's not currently any scenario that would use it, we would not
+    // have any test coverage for such an implementation.
+    throw new Error('Not implemented: moving existing logical children');
+  }
 
   const newSiblings = getLogicalChildrenArray(parent);
   if (childIndex < newSiblings.length) {
@@ -185,4 +188,4 @@ function createSymbolOrFallback(fallback: string): symbol | string {
 }
 
 // Nominal type to represent a logical element without needing to allocate any object for instances
-export interface LogicalElement { LogicalElement__DO_NOT_IMPLEMENT: any };
+export interface LogicalElement { LogicalElement__DO_NOT_IMPLEMENT: any }
