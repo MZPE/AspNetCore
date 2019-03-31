@@ -1,12 +1,15 @@
+/* eslint-disable @typescript-eslint/camelcase */
 import { System_Object, System_String, System_Array, MethodHandle, Pointer } from '../Platform/Platform';
 import { platform } from '../Environment';
 import { RenderBatch } from './RenderBatch/RenderBatch';
 import { BrowserRenderer, StartEndPair } from './BrowserRenderer';
 
-type BrowserRendererRegistry = { [browserRendererId: number]: BrowserRenderer };
+interface BrowserRendererRegistry {
+  [browserRendererId: number]: BrowserRenderer;
+}
 const browserRenderers: BrowserRendererRegistry = {};
 
-export function attachRootComponentToElement(browserRendererId: number, elementSelector: string | StartEndPair, componentId: number) {
+export function attachRootComponentToElement(browserRendererId: number, elementSelector: string | StartEndPair, componentId: number): void {
 
   const { start, end } = elementSelector as StartEndPair;
   const element = start && end ? elementSelector as StartEndPair : document.querySelector(elementSelector as string);
@@ -21,7 +24,7 @@ export function attachRootComponentToElement(browserRendererId: number, elementS
   browserRenderer.attachRootComponentToElement(componentId, element);
 }
 
-export function renderBatch(browserRendererId: number, batch: RenderBatch) {
+export function renderBatch(browserRendererId: number, batch: RenderBatch): void {
   const browserRenderer = browserRenderers[browserRendererId];
   if (!browserRenderer) {
     throw new Error(`There is no browser renderer with ID ${browserRendererId}.`);

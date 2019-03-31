@@ -4,12 +4,14 @@ import { DefaultReconnectDisplay } from './DefaultReconnectDisplay';
 import { ReconnectDisplay } from './ReconnectDisplay';
 import { ILogger, LogLevel } from '../Logging/ILogger';
 export class AutoReconnectCircuitHandler implements CircuitHandler {
-  static readonly MaxRetries = 5;
-  static readonly RetryInterval = 3000;
-  static readonly DialogId = 'components-reconnect-modal';
-  reconnectDisplay: ReconnectDisplay;
+  private static readonly MaxRetries = 5;
+  private static readonly RetryInterval = 3000;
+  public static readonly DialogId = 'components-reconnect-modal';
+  private reconnectDisplay: ReconnectDisplay;
+  public logger: ILogger;
 
-  constructor(public logger: ILogger) {
+  public constructor(logger: ILogger) {
+    this.logger = logger;
     this.reconnectDisplay = new DefaultReconnectDisplay(document);
     document.addEventListener('DOMContentLoaded', () => {
       const modal = document.getElementById(AutoReconnectCircuitHandler.DialogId);
@@ -18,15 +20,15 @@ export class AutoReconnectCircuitHandler implements CircuitHandler {
       }
     });
   }
-  onConnectionUp()  : void{
+  public onConnectionUp(): void {
     this.reconnectDisplay.hide();
   }
 
-  delay() : Promise<void>{
+  public delay(): Promise<void> {
     return new Promise((resolve) => setTimeout(resolve, AutoReconnectCircuitHandler.RetryInterval));
   }
 
-  async onConnectionDown() : Promise<void> {
+  public async onConnectionDown(): Promise<void> {
     this.reconnectDisplay.show();
 
     for (let i = 0; i < AutoReconnectCircuitHandler.MaxRetries; i++) {

@@ -1,19 +1,20 @@
+  /* eslint-disable no-console */
 
-import { ILogger, LogLevel } from "./ILogger";
+import { ILogger, LogLevel } from './ILogger';
 
 export class NullLogger implements ILogger {
   public static instance: ILogger = new NullLogger();
 
   private constructor() { }
 
-  public log(_logLevel: LogLevel, _message: string): void {
+  public log(_logLevel: LogLevel, _message: string): void { // eslint-disable-line @typescript-eslint/no-unused-vars
   }
 }
 
 export class ConsoleLogger implements ILogger {
   private readonly minimumLogLevel: LogLevel;
 
-  constructor(minimumLogLevel: LogLevel) {
+  public constructor(minimumLogLevel: LogLevel) {
     this.minimumLogLevel = minimumLogLevel;
   }
 

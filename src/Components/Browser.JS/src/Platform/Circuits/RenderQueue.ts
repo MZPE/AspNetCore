@@ -1,6 +1,6 @@
-import { renderBatch } from "../../Rendering/Renderer";
-import { OutOfProcessRenderBatch } from "../../Rendering/RenderBatch/OutOfProcessRenderBatch";
-import { ILogger, LogLevel } from "../Logging/ILogger";
+import { renderBatch } from '../../Rendering/Renderer';
+import { OutOfProcessRenderBatch } from '../../Rendering/RenderBatch/OutOfProcessRenderBatch';
+import { ILogger, LogLevel } from '../Logging/ILogger';
 
 export enum BatchStatus {
   Pending = 1,
@@ -13,12 +13,17 @@ export default class RenderQueue {
 
   private pendingRenders = new Map<number, Uint8Array>();
   private nextBatchId = 2;
+  public browserRendererId: number;
+  public logger: ILogger;
 
-  constructor(public browserRendererId: number, public logger: ILogger) { }
+  public constructor(browserRendererId: number, logger: ILogger) {
+    this.browserRendererId = browserRendererId;
+    this.logger = logger;
+  }
 
-  static getOrCreateQueue(browserRendererId: number, logger: ILogger) {
+  public static getOrCreateQueue(browserRendererId: number, logger: ILogger): RenderQueue {
     const queue = this.renderQueues.get(browserRendererId);
-    if (!!queue) {
+    if (queue) {
       return queue;
     }
 
@@ -27,7 +32,7 @@ export default class RenderQueue {
     return newQueue;
   }
 
-  public enqueue(receivedBatchId: number, receivedBatchData: Uint8Array) {
+  public enqueue(receivedBatchId: number, receivedBatchData: Uint8Array): BatchStatus {
     if (receivedBatchId < this.nextBatchId) {
       this.logger.log(LogLevel.Debug, `Batch ${receivedBatchId} already processed. Waiting for batch ${this.nextBatchId}.`);
       return BatchStatus.Processed;
@@ -43,7 +48,7 @@ export default class RenderQueue {
     return BatchStatus.Queued;
   }
 
-  public renderPendingBatches(connection: signalR.HubConnection) {
+  public renderPendingBatches(connection: signalR.HubConnection): void {
     let batchId: number | undefined;
     let batchData: Uint8Array | undefined;
 
@@ -69,7 +74,7 @@ export default class RenderQueue {
     }
   }
 
-  private tryDequeueNextBatch() {
+  private tryDequeueNextBatch(): { batchId?: number; batchData?: Uint8Array } {
     const batchId = this.nextBatchId;
     const batchData = this.pendingRenders.get(this.nextBatchId);
     if (batchData != undefined) {
@@ -80,16 +85,16 @@ export default class RenderQueue {
     }
   }
 
-  public getLastBatchid() {
+  public getLastBatchid(): number {
     return this.nextBatchId - 1;
   }
 
-  private dequeueBatch() {
+  private dequeueBatch(): void {
     this.pendingRenders.delete(this.nextBatchId);
     this.nextBatchId++;
   }
 
-  private async completeBatch(connection: signalR.HubConnection, batchId: number) {
+  private async completeBatch(connection: signalR.HubConnection, batchId: number): Promise<void> {
     for (let i = 0; i < 3; i++) {
       try {
         await connection.send('OnRenderCompleted', batchId, null);
